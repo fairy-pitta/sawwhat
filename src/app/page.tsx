@@ -2,31 +2,39 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import { DefaultIcon } from '@/components/MapIcons';
-import 'leaflet/dist/leaflet.css';
+import { GoogleMap, Marker, useLoadScript } from '@react-google-maps/api';
+
+const mapContainerStyle = {
+  width: '100%',
+  height: '100%',
+};
+
+const center = {
+  lat: 1.3521, // シンガポール中心
+  lng: 103.8198,
+};
 
 export default function HomePage() {
   const [species, setSpecies] = useState('');
   const [lat, setLat] = useState('');
   const [lng, setLng] = useState('');
   const [message, setMessage] = useState('');
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
 
-  // 現在地ピンの緯度経度を格納
-  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(
-    null
-  );
+  const { isLoaded } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+  });
 
-  // デバイスの位置情報を取得
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const latitude = position.coords.latitude;
           const longitude = position.coords.longitude;
+
           setLat(latitude.toString());
           setLng(longitude.toString());
-          setCurrentLocation({ lat: latitude, lng: longitude }); // 現在地のピンを設定
+          setCurrentLocation({ lat: latitude, lng: longitude });
         },
         (error) => {
           console.error('位置情報の取得に失敗しました: ', error);
@@ -38,13 +46,34 @@ export default function HomePage() {
     }
   }, []);
 
-  const handleMarkerDragEnd = (event: any) => {
-    const { lat, lng } = event.target.getLatLng();
-    setLat(lat.toString());
-    setLng(lng.toString());
-    setCurrentLocation({ lat, lng });
+  const handleMarkerDragEnd = (event: google.maps.MapMouseEvent) => {
+    if (event.latLng) {
+      const latitude = event.latLng.lat();
+      const longitude = event.latLng.lng();
+      setLat(latitude.toString());
+      setLng(longitude.toString());
+      setCurrentLocation({ lat: latitude, lng: longitude });
+    }
   };
 
+  const handleGetCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const latitude = position.coords.latitude;
+          const longitude = position.coords.longitude;
+
+          setLat(latitude.toString());
+          setLng(longitude.toString());
+          setCurrentLocation({ lat: latitude, lng: longitude });
+        },
+        (error) => {
+          console.error('現在地の取得に失敗しました: ', error);
+          setMessage('現在地を取得できませんでした。');
+        }
+      );
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,35 +98,27 @@ export default function HomePage() {
       setSpecies('');
     }
 
-    // メッセージを5秒後に消す
     setTimeout(() => setMessage(''), 5000);
   };
 
+  if (!isLoaded) return <div>Loading...</div>;
+
   return (
     <div style={{ position: 'relative', height: '100vh', width: '100vw' }}>
-      {/* 地図 */}
-      <MapContainer
-        center={currentLocation ? [currentLocation.lat, currentLocation.lng] : [1.3521, 103.8198]} // 現在地に中心を設定
+      {/* Google Maps */}
+      <GoogleMap
+        mapContainerStyle={mapContainerStyle}
+        center={currentLocation || center}
         zoom={12}
-        style={{ height: '100%', width: '100%' }}
       >
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        />
         {currentLocation && (
           <Marker
-            position={[currentLocation.lat, currentLocation.lng]} // 現在地の位置
-            icon={DefaultIcon}
+            position={currentLocation}
             draggable={true}
-            eventHandlers={{
-              dragend: handleMarkerDragEnd,
-            }}
-          >
-            <Popup>ドラッグして位置を調整できます</Popup>
-          </Marker>
+            onDragEnd={handleMarkerDragEnd}
+          />
         )}
-      </MapContainer>
+      </GoogleMap>
 
       {/* 投稿フォーム */}
       <div
@@ -119,18 +140,21 @@ export default function HomePage() {
             value={species}
             onChange={(e) => setSpecies(e.target.value)}
             required
+            style={{ marginBottom: '10px', padding: '5px', width: '100%' }}
           />
           <input
             type="text"
             placeholder="緯度 (latitude)"
             value={lat}
             readOnly
+            style={{ marginBottom: '10px', padding: '5px', width: '100%' }}
           />
           <input
             type="text"
             placeholder="経度 (longitude)"
             value={lng}
             readOnly
+            style={{ marginBottom: '10px', padding: '5px', width: '100%' }}
           />
           <button
             type="submit"
@@ -141,12 +165,37 @@ export default function HomePage() {
               border: 'none',
               borderRadius: '5px',
               cursor: 'pointer',
+              marginRight: '10px',
             }}
           >
             投稿
           </button>
+          <button
+            type="button"
+            onClick={handleGetCurrentLocation}
+            style={{
+              padding: '10px',
+              backgroundColor: '#28A745',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer',
+            }}
+          >
+            現在地に移動
+          </button>
         </form>
-        {message && <p>{message}</p>}
+        {message && (
+          <p
+            style={{
+              color: message.includes('成功') ? 'green' : 'red',
+              marginTop: '10px',
+              fontWeight: 'bold',
+            }}
+          >
+            {message}
+          </p>
+        )}
       </div>
     </div>
   );
