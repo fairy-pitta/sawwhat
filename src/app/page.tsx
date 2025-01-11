@@ -1,8 +1,10 @@
 'use client';
 
-import Map from '@/components/Map'; // 地図コンポーネントをインポート
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { DefaultIcon } from '@/components/MapIcons';
+import 'leaflet/dist/leaflet.css';
 
 export default function HomePage() {
   const [species, setSpecies] = useState('');
@@ -10,13 +12,21 @@ export default function HomePage() {
   const [lng, setLng] = useState('');
   const [message, setMessage] = useState('');
 
+  // 現在地ピンの緯度経度を格納
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(
+    null
+  );
+
   // デバイスの位置情報を取得
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setLat(position.coords.latitude.toString());
-          setLng(position.coords.longitude.toString());
+          const latitude = position.coords.latitude;
+          const longitude = position.coords.longitude;
+          setLat(latitude.toString());
+          setLng(longitude.toString());
+          setCurrentLocation({ lat: latitude, lng: longitude }); // 現在地のピンを設定
         },
         (error) => {
           console.error('位置情報の取得に失敗しました: ', error);
@@ -28,33 +38,52 @@ export default function HomePage() {
     }
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const { error } = await supabase.from('sightings').insert([
-      {
-        species,
-        location: { lat: parseFloat(lat), lng: parseFloat(lng) },
-        timestamp: new Date().toISOString(),
-      },
-    ]);
-
-    if (error) {
-      setMessage('投稿に失敗しました：' + error.message);
-    } else {
-      setMessage('投稿が成功しました！');
-      setSpecies('');
-    }
+  const handleMarkerDragEnd = (event: any) => {
+    const { lat, lng } = event.target.getLatLng();
+    setLat(lat.toString());
+    setLng(lng.toString());
   };
 
   return (
     <div style={{ position: 'relative', height: '100vh', width: '100vw' }}>
       {/* 地図 */}
-      <Map />
+      <MapContainer
+        center={currentLocation ? [currentLocation.lat, currentLocation.lng] : [1.3521, 103.8198]} // 現在地に中心を設定
+        zoom={12}
+        style={{ height: '100%', width: '100%' }}
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        />
+        {currentLocation && (
+          <Marker
+            position={[currentLocation.lat, currentLocation.lng]} // 現在地の位置
+            icon={DefaultIcon}
+            draggable={true}
+            eventHandlers={{
+              dragend: handleMarkerDragEnd,
+            }}
+          >
+            <Popup>ドラッグして位置を調整できます</Popup>
+          </Marker>
+        )}
+      </MapContainer>
 
       {/* 投稿フォーム */}
-      <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'white', padding: '10px', borderRadius: '8px', zIndex: 1000 }}>
+      <div
+        style={{
+          position: 'absolute',
+          top: '10px',
+          left: '10px',
+          background: 'white',
+          padding: '10px',
+          borderRadius: '8px',
+          zIndex: 1000,
+        }}
+      >
         <h3>投稿フォーム</h3>
-        <form onSubmit={handleSubmit}>
+        <form>
           <input
             type="text"
             placeholder="鳥の名前 (species)"
@@ -66,17 +95,14 @@ export default function HomePage() {
             type="text"
             placeholder="緯度 (latitude)"
             value={lat}
-            onChange={(e) => setLat(e.target.value)}
             readOnly
           />
           <input
             type="text"
             placeholder="経度 (longitude)"
             value={lng}
-            onChange={(e) => setLng(e.target.value)}
             readOnly
           />
-          <button type="submit">投稿</button>
         </form>
         {message && <p>{message}</p>}
       </div>
