@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { GoogleMap, Marker, useLoadScript } from '@react-google-maps/api';
+import MapSection from '@/components/MapSection';
+import PostForm from '@/components/PostForm';
+import { useLoadScript } from '@react-google-maps/api';
 
 const mapContainerStyle = {
   width: '100%',
@@ -21,10 +23,12 @@ export default function HomePage() {
   const [message, setMessage] = useState('');
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
 
+  // Google Mapsの読み込み
   const { isLoaded } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
   });
 
+  // 現在地の取得
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -46,6 +50,7 @@ export default function HomePage() {
     }
   }, []);
 
+  // マーカーをドラッグした際の処理
   const handleMarkerDragEnd = (event: google.maps.MapMouseEvent) => {
     if (event.latLng) {
       const latitude = event.latLng.lat();
@@ -56,6 +61,7 @@ export default function HomePage() {
     }
   };
 
+  // 現在地に戻るボタン
   const handleGetCurrentLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -75,6 +81,7 @@ export default function HomePage() {
     }
   };
 
+  // 投稿処理
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -83,6 +90,7 @@ export default function HomePage() {
       return;
     }
 
+    // Supabaseにデータを挿入
     const { error } = await supabase.from('sightings').insert([
       {
         species,
@@ -105,98 +113,24 @@ export default function HomePage() {
 
   return (
     <div style={{ position: 'relative', height: '100vh', width: '100vw' }}>
-      {/* Google Maps */}
-      <GoogleMap
+      {/* 地図表示部分 */}
+      <MapSection
+        currentLocation={currentLocation}
+        center={center}
         mapContainerStyle={mapContainerStyle}
-        center={currentLocation || center}
-        zoom={12}
-      >
-        {currentLocation && (
-          <Marker
-            position={currentLocation}
-            draggable={true}
-            onDragEnd={handleMarkerDragEnd}
-          />
-        )}
-      </GoogleMap>
+        handleMarkerDragEnd={handleMarkerDragEnd}
+      />
 
-      {/* 投稿フォーム */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '10px',
-          left: '10px',
-          background: 'white',
-          padding: '10px',
-          borderRadius: '8px',
-          zIndex: 1000,
-        }}
-      >
-        <h3>投稿フォーム</h3>
-        <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            placeholder="鳥の名前 (species)"
-            value={species}
-            onChange={(e) => setSpecies(e.target.value)}
-            required
-            style={{ marginBottom: '10px', padding: '5px', width: '100%' }}
-          />
-          <input
-            type="text"
-            placeholder="緯度 (latitude)"
-            value={lat}
-            readOnly
-            style={{ marginBottom: '10px', padding: '5px', width: '100%' }}
-          />
-          <input
-            type="text"
-            placeholder="経度 (longitude)"
-            value={lng}
-            readOnly
-            style={{ marginBottom: '10px', padding: '5px', width: '100%' }}
-          />
-          <button
-            type="submit"
-            style={{
-              padding: '10px',
-              backgroundColor: '#007BFF',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: 'pointer',
-              marginRight: '10px',
-            }}
-          >
-            投稿
-          </button>
-          <button
-            type="button"
-            onClick={handleGetCurrentLocation}
-            style={{
-              padding: '10px',
-              backgroundColor: '#28A745',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: 'pointer',
-            }}
-          >
-            現在地に移動
-          </button>
-        </form>
-        {message && (
-          <p
-            style={{
-              color: message.includes('成功') ? 'green' : 'red',
-              marginTop: '10px',
-              fontWeight: 'bold',
-            }}
-          >
-            {message}
-          </p>
-        )}
-      </div>
+      {/* 投稿フォーム部分 */}
+      <PostForm
+        species={species}
+        setSpecies={setSpecies}
+        lat={lat}
+        lng={lng}
+        message={message}
+        handleSubmit={handleSubmit}
+        handleGetCurrentLocation={handleGetCurrentLocation}
+      />
     </div>
   );
 }
