@@ -42,6 +42,35 @@ export default function HomePage() {
     const { lat, lng } = event.target.getLatLng();
     setLat(lat.toString());
     setLng(lng.toString());
+    setCurrentLocation({ lat, lng });
+  };
+
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!species || !lat || !lng) {
+      setMessage('鳥の名前、緯度、経度を入力してください。');
+      return;
+    }
+
+    const { error } = await supabase.from('sightings').insert([
+      {
+        species,
+        location: { lat: parseFloat(lat), lng: parseFloat(lng) },
+        timestamp: new Date().toISOString(),
+      },
+    ]);
+
+    if (error) {
+      setMessage(`投稿に失敗しました: ${error.message}`);
+    } else {
+      setMessage('投稿が成功しました！');
+      setSpecies('');
+    }
+
+    // メッセージを5秒後に消す
+    setTimeout(() => setMessage(''), 5000);
   };
 
   return (
@@ -83,7 +112,7 @@ export default function HomePage() {
         }}
       >
         <h3>投稿フォーム</h3>
-        <form>
+        <form onSubmit={handleSubmit}>
           <input
             type="text"
             placeholder="鳥の名前 (species)"
@@ -103,6 +132,19 @@ export default function HomePage() {
             value={lng}
             readOnly
           />
+          <button
+            type="submit"
+            style={{
+              padding: '10px',
+              backgroundColor: '#007BFF',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer',
+            }}
+          >
+            投稿
+          </button>
         </form>
         {message && <p>{message}</p>}
       </div>
