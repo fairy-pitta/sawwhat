@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
-import MapSection from '@/components/MapSection';
-import PostForm from '@/components/PostForm';
-import { useLoadScript } from '@react-google-maps/api';
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import { GoogleMap, Marker, useLoadScript } from "@react-google-maps/api";
+import PostForm from "@/components/PostForm";
 
 const mapContainerStyle = {
-  width: '100%',
-  height: '100%',
+  width: "100%",
+  height: "100%",
 };
 
 const center = {
@@ -17,18 +16,21 @@ const center = {
 };
 
 export default function HomePage() {
-  const [species, setSpecies] = useState('');
-  const [lat, setLat] = useState('');
-  const [lng, setLng] = useState('');
-  const [message, setMessage] = useState('');
-  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [timestamp, setTimestamp] = useState(
+    new Date().toISOString().slice(0, -1)
+  );
+  const [lat, setLat] = useState("");
+  const [lng, setLng] = useState("");
+  const [message, setMessage] = useState("");
+  const [currentLocation, setCurrentLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
 
-  // Google Mapsの読み込み
   const { isLoaded } = useLoadScript({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
   });
 
-  // 現在地の取得
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -41,16 +43,15 @@ export default function HomePage() {
           setCurrentLocation({ lat: latitude, lng: longitude });
         },
         (error) => {
-          console.error('位置情報の取得に失敗しました: ', error);
-          setMessage('位置情報が利用できません。');
+          console.error("位置情報の取得に失敗しました: ", error);
+          setMessage("位置情報が利用できません。");
         }
       );
     } else {
-      setMessage('このブラウザでは位置情報がサポートされていません。');
+      setMessage("このブラウザでは位置情報がサポートされていません。");
     }
   }, []);
 
-  // マーカーをドラッグした際の処理
   const handleMarkerDragEnd = (event: google.maps.MapMouseEvent) => {
     if (event.latLng) {
       const latitude = event.latLng.lat();
@@ -61,7 +62,6 @@ export default function HomePage() {
     }
   };
 
-  // 現在地に戻るボタン
   const handleGetCurrentLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -74,57 +74,68 @@ export default function HomePage() {
           setCurrentLocation({ lat: latitude, lng: longitude });
         },
         (error) => {
-          console.error('現在地の取得に失敗しました: ', error);
-          setMessage('現在地を取得できませんでした。');
+          console.error("現在地の取得に失敗しました: ", error);
+          setMessage("現在地を取得できませんでした。");
         }
       );
     }
   };
 
-  // 投稿処理
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (
+    e: React.FormEvent,
+    selectedOption: { common_name: string; sci_name: string; species_code: string }
+  ) => {
     e.preventDefault();
 
-    if (!species || !lat || !lng) {
-      setMessage('鳥の名前、緯度、経度を入力してください。');
+    if (!selectedOption || !lat || !lng) {
+      setMessage("すべての情報を入力してください。");
       return;
     }
 
-    // Supabaseにデータを挿入
-    const { error } = await supabase.from('sightings').insert([
+    const { common_name, sci_name, species_code } = selectedOption;
+
+    const { error } = await supabase.from("sightings").insert([
       {
-        species,
+        species_code,
+        common_name,
+        sci_name,
         location: { lat: parseFloat(lat), lng: parseFloat(lng) },
-        timestamp: new Date().toISOString(),
+        timestamp,
       },
     ]);
 
     if (error) {
       setMessage(`投稿に失敗しました: ${error.message}`);
     } else {
-      setMessage('投稿が成功しました！');
-      setSpecies('');
+      setMessage("投稿が成功しました！");
     }
 
-    setTimeout(() => setMessage(''), 5000);
+    setTimeout(() => setMessage(""), 5000);
   };
 
   if (!isLoaded) return <div>Loading...</div>;
 
   return (
-    <div style={{ position: 'relative', height: '100vh', width: '100vw' }}>
-      {/* 地図表示部分 */}
-      <MapSection
-        currentLocation={currentLocation}
-        center={center}
+    <div style={{ position: "relative", height: "100vh", width: "100vw" }}>
+      {/* Google Maps */}
+      <GoogleMap
         mapContainerStyle={mapContainerStyle}
-        handleMarkerDragEnd={handleMarkerDragEnd}
-      />
+        center={currentLocation || center}
+        zoom={12}
+      >
+        {currentLocation && (
+          <Marker
+            position={currentLocation}
+            draggable={true}
+            onDragEnd={handleMarkerDragEnd}
+          />
+        )}
+      </GoogleMap>
 
-      {/* 投稿フォーム部分 */}
+      {/* 投稿フォーム */}
       <PostForm
-        species={species}
-        setSpecies={setSpecies}
+        timestamp={timestamp}
+        setTimestamp={setTimestamp}
         lat={lat}
         lng={lng}
         message={message}
