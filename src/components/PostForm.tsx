@@ -32,6 +32,7 @@ const PostForm: React.FC<PostFormProps> = ({
     sci_name: string;
     species_code: string;
   } | null>(null);
+  const [shareableData, setShareableData] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchSpecies = async () => {
@@ -56,6 +57,22 @@ const PostForm: React.FC<PostFormProps> = ({
         )
       : [];
 
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "鳥の目撃情報",
+          text: shareableData || "目撃情報を共有します！",
+          url: window.location.href, // 現在のページのURL
+        });
+      } catch (error) {
+        console.error("共有に失敗しました:", error);
+      }
+    } else {
+      alert("このブラウザは共有機能をサポートしていません。");
+    }
+  };
+
   return (
     <div
       style={{
@@ -71,7 +88,16 @@ const PostForm: React.FC<PostFormProps> = ({
       }}
     >
       <h3 style={{ fontWeight: "bold", marginBottom: "10px" }}>投稿フォーム</h3>
-      <form onSubmit={(e) => selectedOption && handleSubmit(e, selectedOption)}>
+      <form
+        onSubmit={(e) => {
+          if (selectedOption) {
+            handleSubmit(e, selectedOption);
+            setShareableData(
+              `鳥の名前: ${selectedOption.common_name}\n科学名: ${selectedOption.sci_name}\n場所: https://maps.google.com/?q=${lat},${lng}\n時間: ${timestamp}`
+            );
+          }
+        }}
+      >
         <input
           type="text"
           placeholder="鳥の名前を入力 (例: Japanese White-eye)"
@@ -189,6 +215,23 @@ const PostForm: React.FC<PostFormProps> = ({
           </button>
         </div>
       </form>
+      {shareableData && (
+        <button
+          onClick={handleShare}
+          style={{
+            marginTop: "10px",
+            padding: "10px",
+            backgroundColor: "#28a745",
+            color: "white",
+            border: "none",
+            borderRadius: "5px",
+            cursor: "pointer",
+            width: "100%",
+          }}
+        >
+          シェア
+        </button>
+      )}
       {message && (
         <p
           style={{
