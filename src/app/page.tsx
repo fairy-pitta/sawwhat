@@ -13,7 +13,7 @@ const mapContainerStyle = {
 };
 
 const center = {
-  lat: 1.3521, // シンガポール中心
+  lat: 1.3521, // Center of Singapore
   lng: 103.8198,
 };
 
@@ -50,6 +50,7 @@ export default function HomePage() {
     sci_name: string;
   } | null>(null);
 
+  // Fetch current location
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -62,13 +63,14 @@ export default function HomePage() {
           setCurrentLocation({ lat: latitude, lng: longitude });
         },
         (error) => {
-          console.error("位置情報の取得に失敗しました: ", error);
-          setMessage("位置情報が利用できません。");
+          console.error("Failed to retrieve location: ", error);
+          setMessage("Location is unavailable.");
         }
       );
     }
   }, []);
 
+  // Fetch sightings from the database
   useEffect(() => {
     const fetchSightings = async () => {
       const { data, error } = await supabase
@@ -76,7 +78,7 @@ export default function HomePage() {
         .select("id, location, common_name, sci_name, timestamp");
 
       if (error) {
-        console.error("目撃情報の取得に失敗しました: ", error.message);
+        console.error("Failed to fetch sightings: ", error.message);
       } else {
         setSightings(data || []);
       }
@@ -85,6 +87,7 @@ export default function HomePage() {
     fetchSightings();
   }, []);
 
+  // Filter sightings based on the selected filter
   const filteredSightings = filter
     ? sightings.filter(
         (s) => s.common_name === filter.common_name && s.sci_name === filter.sci_name
@@ -92,7 +95,7 @@ export default function HomePage() {
     : sightings;
 
   if (loadError) {
-    return <div>Google Maps のロードに失敗しました。</div>;
+    return <div>Failed to load Google Maps.</div>;
   }
 
   if (!isLoaded) {
@@ -127,7 +130,7 @@ export default function HomePage() {
         handleSubmit={(e, selectedOption) => {
           e.preventDefault();
           if (!selectedOption || !lat || !lng) {
-            setMessage("すべての情報を入力してください。");
+            setMessage("Please fill in all the required fields.");
             return;
           }
 
@@ -146,9 +149,9 @@ export default function HomePage() {
             ])
             .then(({ error }) => {
               if (error) {
-                setMessage(`投稿に失敗しました: ${error.message}`);
+                setMessage(`Failed to submit: ${error.message}`);
               } else {
-                setMessage("投稿が成功しました！");
+                setMessage("Submission successful!");
               }
             });
 
@@ -166,8 +169,8 @@ export default function HomePage() {
                 setCurrentLocation({ lat: latitude, lng: longitude });
               },
               (error) => {
-                console.error("現在地の取得に失敗しました: ", error);
-                setMessage("現在地を取得できませんでした。");
+                console.error("Failed to retrieve current location: ", error);
+                setMessage("Could not get current location.");
               }
             );
           }

@@ -47,8 +47,8 @@ const Map: React.FC<MapProps> = ({
         key={sighting.id}
         position={sighting.location}
         icon={{
-            url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png", // ピンの色を青に変更
-            scaledSize: new google.maps.Size(32, 32), // サイズを調整
+            url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png", 
+            scaledSize: new google.maps.Size(32, 32), 
         }}
         onClick={() => setSelectedSighting(sighting.location)}
         >

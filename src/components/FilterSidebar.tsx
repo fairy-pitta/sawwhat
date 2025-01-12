@@ -15,6 +15,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ setFilter }) => {
     sci_name: string;
   } | null>(null);
 
+  // Fetch species data from the database
   useEffect(() => {
     const fetchSpecies = async () => {
       const { data, error } = await supabase
@@ -22,7 +23,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ setFilter }) => {
         .select("common_name, sci_name");
 
       if (error) {
-        console.error("鳥のデータ取得に失敗しました:", error.message);
+        console.error("Failed to fetch species data:", error.message);
       } else {
         setSpeciesOptions(data || []);
       }
@@ -31,6 +32,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ setFilter }) => {
     fetchSpecies();
   }, []);
 
+  // Filter species options based on the search term
   const filteredOptions =
     searchTerm.trim() === ""
       ? []
@@ -38,6 +40,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ setFilter }) => {
           option.common_name.toLowerCase().includes(searchTerm.toLowerCase())
         );
 
+  // Apply the selected filter
   const handleFilterApply = () => {
     if (selectedOption) {
       setFilter(selectedOption);
@@ -55,14 +58,14 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ setFilter }) => {
         borderRadius: "8px",
         zIndex: 1000,
         boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
-        width: "300px", // 窓の幅を広げる
+        width: "300px", // Increased the width
         color: "#333",
       }}
     >
-      <h4>フィルタ</h4>
+      <h4>Filter</h4>
       <input
         type="text"
-        placeholder="鳥の名前を入力"
+        placeholder="Enter bird name"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         style={{
@@ -76,7 +79,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ setFilter }) => {
       {filteredOptions.length > 0 && (
         <ul
           style={{
-            maxHeight: "200px", // 高さも調整
+            maxHeight: "200px", // Adjusted height
             overflowY: "auto",
             marginBottom: "10px",
             border: "1px solid #ccc",
@@ -93,7 +96,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ setFilter }) => {
                 setSelectedOption(option);
               }}
               style={{
-                display: "flex", // チェックマークと名前を並べる
+                display: "flex", // Align checkbox and name horizontally
                 justifyContent: "space-between",
                 alignItems: "center",
                 padding: "5px",
@@ -131,7 +134,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ setFilter }) => {
           cursor: "pointer",
         }}
       >
-        フィルタ適用
+        Apply Filter
       </button>
     </div>
   );

@@ -41,7 +41,7 @@ const PostForm: React.FC<PostFormProps> = ({
         .select("common_name, sci_name, species_code");
 
       if (error) {
-        console.error("鳥のデータ取得に失敗しました:", error.message);
+        console.error("Failed to fetch bird data:", error.message);
       } else {
         setSpeciesOptions(data || []);
       }
@@ -61,15 +61,15 @@ const PostForm: React.FC<PostFormProps> = ({
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "鳥の目撃情報",
-          text: shareableData || "目撃情報を共有します！",
-          url: window.location.href, // 現在のページのURL
+          title: "Bird Sighting Information",
+          text: shareableData || "Sharing bird sighting details!",
+          url: window.location.href, // URL of the current page
         });
       } catch (error) {
-        console.error("共有に失敗しました:", error);
+        console.error("Sharing failed:", error);
       }
     } else {
-      alert("このブラウザは共有機能をサポートしていません。");
+      alert("Your browser does not support the sharing feature.");
     }
   };
 
@@ -87,20 +87,20 @@ const PostForm: React.FC<PostFormProps> = ({
         color: "#333",
       }}
     >
-      <h3 style={{ fontWeight: "bold", marginBottom: "10px" }}>投稿フォーム</h3>
+      <h3 style={{ fontWeight: "bold", marginBottom: "10px" }}>Report Your Sighting</h3>
       <form
         onSubmit={(e) => {
           if (selectedOption) {
             handleSubmit(e, selectedOption);
             setShareableData(
-              `鳥の名前: ${selectedOption.common_name}\n科学名: ${selectedOption.sci_name}\n場所: https://maps.google.com/?q=${lat},${lng}\n時間: ${timestamp}`
+              `Bird Name: ${selectedOption.common_name}\nScientific Name: ${selectedOption.sci_name}\nLocation: https://maps.google.com/?q=${lat},${lng}\nTime: ${timestamp}`
             );
           }
         }}
       >
         <input
           type="text"
-          placeholder="鳥の名前を入力 (例: Japanese White-eye)"
+          placeholder="Enter bird name (e.g., Japanese White-eye)"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           required
@@ -196,7 +196,7 @@ const PostForm: React.FC<PostFormProps> = ({
               marginRight: "10px",
             }}
           >
-            投稿
+            Post
           </button>
           <button
             type="button"
@@ -211,7 +211,7 @@ const PostForm: React.FC<PostFormProps> = ({
               fontWeight: "bold",
             }}
           >
-            現在地に移動
+            Get Current Location
           </button>
         </div>
       </form>
@@ -229,13 +229,13 @@ const PostForm: React.FC<PostFormProps> = ({
             width: "100%",
           }}
         >
-          シェア
+          Share
         </button>
       )}
       {message && (
         <p
           style={{
-            color: message.includes("成功") ? "green" : "red",
+            color: message.includes("success") ? "green" : "red",
             marginTop: "10px",
             fontWeight: "bold",
           }}
