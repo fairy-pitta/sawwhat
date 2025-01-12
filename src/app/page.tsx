@@ -27,15 +27,18 @@ export default function HomePage() {
     lng: number;
   } | null>(null);
   const [sightings, setSightings] = useState<
-  {
-    id: number;
-    location: { lat: number; lng: number };
-    common_name: string;
-    sci_name: string;
-    timestamp: string;
-  }[]
->([]);
-  const [selectedSighting, setSelectedSighting] = useState<number | null>(null);
+    {
+      id: number;
+      location: { lat: number; lng: number };
+      common_name: string;
+      sci_name: string;
+      timestamp: string;
+    }[]
+  >([]);
+  const [selectedSighting, setSelectedSighting] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
 
   const { isLoaded } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
@@ -163,65 +166,87 @@ export default function HomePage() {
           <Marker
             key={sighting.id}
             position={sighting.location}
-            onClick={() => setSelectedSighting(sighting.id)}
+            onClick={() => setSelectedSighting(sighting.location)}
           >
-            {selectedSighting === sighting.id && (
-              <InfoWindow
-                position={sighting.location}
-                onCloseClick={() => setSelectedSighting(null)}
-              >
-                <div
-                  style={{
-                    backgroundColor: "#fff",
-                    padding: "10px",
-                    borderRadius: "5px",
-                    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.2)",
-                    maxHeight: "200px",
-                    overflowY: "auto", 
-                  }}
+            {selectedSighting?.lat === sighting.location.lat &&
+              selectedSighting?.lng === sighting.location.lng && (
+                <InfoWindow
+                  position={sighting.location}
+                  onCloseClick={() => setSelectedSighting(null)}
                 >
-                  {sightings
-                    .filter(
-                      (s) =>
-                        s.location.lat === sighting.location.lat &&
-                        s.location.lng === sighting.location.lng
-                    )
-                    .map((s, index) => {
-                      const formattedDate = s.timestamp
-                      ? new Date(s.timestamp).toLocaleString("en-SG", {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          timeZone: "Asia/Singapore",
-                        })
-                      : "Unknown Date";
+                  <div
+                    style={{
+                      backgroundColor: "#fff",
+                      padding: "10px",
+                      borderRadius: "5px",
+                      boxShadow: "0 2px 10px rgba(0, 0, 0, 0.2)",
+                      maxHeight: "200px",
+                      overflowY: "auto",
+                    }}
+                  >
+                    {sightings
+                      .filter(
+                        (s) =>
+                          s.location.lat === sighting.location.lat &&
+                          s.location.lng === sighting.location.lng
+                      )
+                      .map((s, index) => {
+                        const formattedDate = s.timestamp
+                          ? new Date(s.timestamp).toLocaleString("en-SG", {
+                              year: "numeric",
+                              month: "2-digit",
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              timeZone: "Asia/Singapore",
+                            })
+                          : "Unknown Date";
 
-                      return (
-                        <div
-                          key={index}
-                          style={{
-                            marginBottom: "10px",
-                            borderBottom: index !== sightings.length - 1 ? "1px solid #ddd" : "none",
-                            paddingBottom: "10px",
-                          }}
-                        >
-                          <h4 style={{ margin: "0 0 5px 0", fontWeight: "bold", color: "#000" }}>
-                            {s.common_name}
-                          </h4>
-                          <p style={{ margin: 0, fontStyle: "italic", color: "#555" }}>
-                            {s.sci_name}
-                          </p>
-                          <p style={{ margin: "5px 0 0 0", fontSize: "12px", color: "#666" }}>
-                            {formattedDate}
-                          </p>
-                        </div>
-                      );
-                    })}
-                </div>
-              </InfoWindow>
-            )}
+                        return (
+                          <div
+                            key={index}
+                            style={{
+                              marginBottom: "10px",
+                              borderBottom:
+                                index !== sightings.length - 1
+                                  ? "1px solid #ddd"
+                                  : "none",
+                              paddingBottom: "10px",
+                            }}
+                          >
+                            <h4
+                              style={{
+                                margin: "0 0 5px 0",
+                                fontWeight: "bold",
+                                color: "#000",
+                              }}
+                            >
+                              {s.common_name}
+                            </h4>
+                            <p
+                              style={{
+                                margin: 0,
+                                fontStyle: "italic",
+                                color: "#555",
+                              }}
+                            >
+                              {s.sci_name}
+                            </p>
+                            <p
+                              style={{
+                                margin: "5px 0 0 0",
+                                fontSize: "12px",
+                                color: "#666",
+                              }}
+                            >
+                              {formattedDate}
+                            </p>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </InfoWindow>
+              )}
           </Marker>
         ))}
       </GoogleMap>
