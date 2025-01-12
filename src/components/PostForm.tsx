@@ -50,11 +50,11 @@ const PostForm: React.FC<PostFormProps> = ({
   }, []);
 
   const filteredOptions =
-  searchTerm.length >= 1
-    ? speciesOptions.filter((option) =>
-        option.common_name.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : [];
+    searchTerm.length >= 1
+      ? speciesOptions.filter((option) =>
+          option.common_name.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      : [];
 
   return (
     <div
@@ -106,6 +106,9 @@ const PostForm: React.FC<PostFormProps> = ({
                   setSelectedOption(option);
                 }}
                 style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
                   padding: "10px",
                   cursor: "pointer",
                   backgroundColor:
@@ -119,7 +122,23 @@ const PostForm: React.FC<PostFormProps> = ({
                   borderRadius: "3px",
                 }}
               >
-                {option.common_name} ({option.sci_name})
+                <span>
+                  {option.common_name}{" "}
+                  <span
+                    style={{
+                      fontStyle: "italic",
+                      color:
+                        selectedOption?.species_code === option.species_code ? "white" : "#333",
+                    }}
+                  >
+                    ({option.sci_name})
+                  </span>
+                </span>
+                {selectedOption?.species_code === option.species_code && (
+                  <span style={{ marginLeft: "10px", color: "white", fontWeight: "bold" }}>
+                    ✔
+                  </span>
+                )}
               </li>
             ))}
           </ul>
