@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useLoadScript } from "@react-google-maps/api";
 import Map from "@/components/Map";
 import PostForm from "@/components/PostForm";
+import FilterSidebar from "@/components/FilterSidebar";
 
 const mapContainerStyle = {
   width: "100%",
@@ -44,6 +45,10 @@ export default function HomePage() {
     lat: number;
     lng: number;
   } | null>(null);
+  const [filter, setFilter] = useState<{
+    common_name: string;
+    sci_name: string;
+  } | null>(null);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -80,6 +85,12 @@ export default function HomePage() {
     fetchSightings();
   }, []);
 
+  const filteredSightings = filter
+    ? sightings.filter(
+        (s) => s.common_name === filter.common_name && s.sci_name === filter.sci_name
+      )
+    : sightings;
+
   if (loadError) {
     return <div>Google Maps のロードに失敗しました。</div>;
   }
@@ -94,7 +105,7 @@ export default function HomePage() {
         mapContainerStyle={mapContainerStyle}
         center={center}
         currentLocation={currentLocation}
-        sightings={sightings}
+        sightings={filteredSightings}
         selectedSighting={selectedSighting}
         setSelectedSighting={setSelectedSighting}
         handleMarkerDragEnd={(event) => {
@@ -162,6 +173,7 @@ export default function HomePage() {
           }
         }}
       />
+      <FilterSidebar setFilter={setFilter} />
     </div>
   );
 }
