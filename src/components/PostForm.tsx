@@ -57,13 +57,22 @@ const PostForm: React.FC<PostFormProps> = ({
         )
       : [];
 
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString("en-SG", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Singapore",
+    });
+  };
+
   const handleShare = async () => {
     if (navigator.share) {
       try {
         await navigator.share({
           title: "Bird Sighting Information",
           text: shareableData || "Sharing bird sighting details!",
-          url: window.location.href, // URL of the current page
+          url: window.location.href,
         });
       } catch (error) {
         console.error("Sharing failed:", error);
@@ -93,7 +102,9 @@ const PostForm: React.FC<PostFormProps> = ({
           if (selectedOption) {
             handleSubmit(e, selectedOption);
             setShareableData(
-              `Bird Name: ${selectedOption.common_name}\nScientific Name: ${selectedOption.sci_name}\nLocation: https://maps.google.com/?q=${lat},${lng}\nTime: ${timestamp}`
+              `Bird Name: ${selectedOption.common_name}\nScientific Name: ${selectedOption.sci_name}\nLocation: https://maps.google.com/?q=${lat},${lng}\nTime: ${formatTimestamp(
+                timestamp
+              )}`
             );
           }
         }}
@@ -183,6 +194,63 @@ const PostForm: React.FC<PostFormProps> = ({
           }}
         />
         <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <button
+          type="button"
+          onClick={handleGetCurrentLocation}
+          style={{
+            padding: "10px",
+            backgroundColor: "white",
+            color: "white",
+            border: "none",
+            borderRadius: "50%",
+            cursor: "pointer",
+            fontWeight: "bold",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transition: "all 0.2s ease", 
+            width: "50px",
+            height: "50px",
+            position: "relative", // Required for tooltip positioning
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "#1f7a2e"; // Darker green on hover
+            e.currentTarget.style.transform = "scale(1.1)"; // Slightly enlarge on hover
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "#218838"; // Reset background color
+            e.currentTarget.style.transform = "scale(1)"; // Reset size
+          }}
+        >
+          <img
+            src="current_location.png"
+            alt="Current Location"
+            style={{
+              width: "24px",
+              height: "24px",
+            }}
+          />
+          <span
+            style={{
+              position: "absolute",
+              bottom: "110%",
+              left: "50%",
+              transform: "translateX(-50%)",
+              backgroundColor: "white",
+              color: "white",
+              padding: "5px",
+              borderRadius: "4px",
+              fontSize: "12px",
+              opacity: "0",
+              visibility: "hidden",
+              transition: "opacity 0.2s ease",
+              whiteSpace: "nowrap",
+            }}
+            className="tooltip"
+          >
+            Move to Current Location
+          </span>
+        </button>
           <button
             type="submit"
             style={{
@@ -193,25 +261,9 @@ const PostForm: React.FC<PostFormProps> = ({
               borderRadius: "5px",
               cursor: "pointer",
               fontWeight: "bold",
-              marginRight: "10px",
             }}
           >
             Post
-          </button>
-          <button
-            type="button"
-            onClick={handleGetCurrentLocation}
-            style={{
-              padding: "10px",
-              backgroundColor: "#218838",
-              color: "white",
-              border: "none",
-              borderRadius: "5px",
-              cursor: "pointer",
-              fontWeight: "bold",
-            }}
-          >
-            Get Current Location
           </button>
         </div>
       </form>
