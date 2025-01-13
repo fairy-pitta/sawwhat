@@ -1,5 +1,5 @@
 import React from "react";
-import { GoogleMap, Marker, InfoWindow } from "@react-google-maps/api";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import formatDate from "@/utils/formatDate";
 
 interface MapProps {
@@ -17,7 +17,7 @@ interface MapProps {
   setSelectedSighting: React.Dispatch<
     React.SetStateAction<{ lat: number; lng: number } | null>
   >;
-  handleMarkerDragEnd: (event: google.maps.MapMouseEvent) => void;
+  handleMarkerDragEnd: (event: L.DragEndEvent) => void;
 }
 
 const Map: React.FC<MapProps> = ({
@@ -34,30 +34,29 @@ const Map: React.FC<MapProps> = ({
 
     return (
       <Marker
-        position={currentLocation}
+        position={[currentLocation.lat, currentLocation.lng]}
         draggable={true}
-        onDragEnd={handleMarkerDragEnd}
-      />
+        eventHandlers={{
+          dragend: (event) => handleMarkerDragEnd(event),
+        }}
+      >
+        <Popup>Your current location</Popup>
+      </Marker>
     );
   };
 
   const renderSightingsMarkers = () => {
     return sightings.map((sighting) => (
-        <Marker
+      <Marker
         key={sighting.id}
-        position={sighting.location}
-        icon={{
-            url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png", 
-            scaledSize: new google.maps.Size(32, 32), 
+        position={[sighting.location.lat, sighting.location.lng]}
+        eventHandlers={{
+          click: () => setSelectedSighting(sighting.location),
         }}
-        onClick={() => setSelectedSighting(sighting.location)}
-        >
+      >
         {selectedSighting?.lat === sighting.location.lat &&
           selectedSighting?.lng === sighting.location.lng && (
-            <InfoWindow
-              position={sighting.location}
-              onCloseClick={() => setSelectedSighting(null)}
-            >
+            <Popup>
               <div
                 style={{
                   backgroundColor: "#fff",
@@ -114,21 +113,28 @@ const Map: React.FC<MapProps> = ({
                     </div>
                   ))}
               </div>
-            </InfoWindow>
+            </Popup>
           )}
       </Marker>
     ));
   };
 
   return (
-    <GoogleMap
-      mapContainerStyle={mapContainerStyle}
-      center={currentLocation || center}
-      zoom={12}
-    >
-      {renderCurrentLocationMarker()}
-      {renderSightingsMarkers()}
-    </GoogleMap>
+    <div style={mapContainerStyle}>
+      <MapContainer
+        center={[center.lat, center.lng]}
+        zoom={12}
+        style={{ width: "100%", height: "100%" }}
+      >
+        {/* Add the TileLayer for OpenStreetMap */}
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        />
+        {renderCurrentLocationMarker()}
+        {renderSightingsMarkers()}
+      </MapContainer>
+    </div>
   );
 };
 
