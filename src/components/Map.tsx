@@ -1,5 +1,6 @@
 import React from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import formatDate from "../utils/formatDate";
 
@@ -18,8 +19,16 @@ interface MapProps {
   setSelectedSighting: React.Dispatch<
     React.SetStateAction<{ lat: number; lng: number } | null>
   >;
-  handleMarkerDragEnd: (event: L.DragEndEvent) => void;
+  handleMarkerDragEnd: (event: L.LeafletEvent) => void;
 }
+
+// Set default icon for Leaflet
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl: "/marker-icon-green.png", // Default green marker icon
+  iconRetinaUrl: "/marker-icon-2x-green.png", // Retina version (optional)
+  shadowUrl: "/marker-shadow.png", // Shadow image
+});
 
 const Map: React.FC<MapProps> = ({
   mapContainerStyle,
@@ -33,10 +42,21 @@ const Map: React.FC<MapProps> = ({
   const renderCurrentLocationMarker = () => {
     if (!currentLocation) return null;
 
+    // Custom red marker icon for current location
+    const currentLocationIcon = new L.Icon({
+      iconUrl: "/marker-icon-red.png", // Path to red marker icon
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41],
+    });
+
     return (
       <Marker
         position={[currentLocation.lat, currentLocation.lng]}
+        icon={currentLocationIcon}
         draggable={true}
+        zIndexOffset={1000}
         eventHandlers={{
           dragend: (event) => handleMarkerDragEnd(event),
         }}
@@ -58,16 +78,7 @@ const Map: React.FC<MapProps> = ({
         {selectedSighting?.lat === sighting.location.lat &&
           selectedSighting?.lng === sighting.location.lng && (
             <Popup>
-              <div
-                style={{
-                  backgroundColor: "#fff",
-                  padding: "10px",
-                  borderRadius: "5px",
-                  boxShadow: "0 2px 10px rgba(0, 0, 0, 0.2)",
-                  maxHeight: "200px",
-                  overflowY: "auto",
-                }}
-              >
+              <div style={{ maxHeight: "200px", overflowY: "auto" }}>
                 {sightings
                   .filter(
                     (s) =>
