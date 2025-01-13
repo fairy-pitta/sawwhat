@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import { supabase } from "@/lib/supabaseClient";
 
 interface PostFormProps {
@@ -222,14 +223,13 @@ const PostForm: React.FC<PostFormProps> = ({
             e.currentTarget.style.transform = "scale(1)"; // Reset size
           }}
         >
-          <img
-            src="current_location.png"
-            alt="Current Location"
-            style={{
-              width: "24px",
-              height: "24px",
-            }}
-          />
+        <Image
+          src="/current_location.png" 
+          alt="Current Location"
+          width={24} 
+          height={24}
+        />
+          
           <span
             style={{
               position: "absolute",
