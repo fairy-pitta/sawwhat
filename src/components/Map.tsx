@@ -1,6 +1,7 @@
 import React from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import formatDate from "@/utils/formatDate";
+import "leaflet/dist/leaflet.css";
+import formatDate from "../utils/formatDate";
 
 interface MapProps {
   mapContainerStyle: React.CSSProperties;
@@ -120,13 +121,12 @@ const Map: React.FC<MapProps> = ({
   };
 
   return (
-    <div style={mapContainerStyle}>
+    <div style={{ ...mapContainerStyle, height: "100vh" }}>
       <MapContainer
         center={[center.lat, center.lng]}
         zoom={12}
         style={{ width: "100%", height: "100%" }}
       >
-        {/* Add the TileLayer for OpenStreetMap */}
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

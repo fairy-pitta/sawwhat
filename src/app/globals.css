@@ -1,11 +1,7 @@
-
-
-/* Tailwind CSS */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Custom Variables */
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -18,9 +14,8 @@
   }
 }
 
-/* General Body Styles */
 body {
-  @apply text-base font-sans;
   color: var(--foreground);
   background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
 }
