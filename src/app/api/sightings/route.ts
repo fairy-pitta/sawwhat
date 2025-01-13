@@ -8,13 +8,18 @@ export async function GET() {
       .select("location, common_name, sci_name, species_code, timestamp");
 
     if (error) {
-      console.error("データ取得エラー:", error.message);
+      console.error("Data retrieval error:", error.message);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json(data || []);
-  } catch (error: any) {
-    console.error("エラー:", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error:", error.message);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    } else {
+      console.error("Unknown error:", error);
+      return NextResponse.json({ error: "An unknown error occurred" }, { status: 500 });
+    }
   }
 }
