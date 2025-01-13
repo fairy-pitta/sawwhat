@@ -6,44 +6,49 @@ import singaporeSpeciesList from "@/data/singaporeSpeciesList.json";
 
 const updateSpeciesTable = async () => {
   try {
-    // フィルタリストを小文字に変換
+    // Convert filter list to lowercase
     const filterList = singaporeSpeciesList.map((code) => code.toLowerCase());
-    console.log("Supabaseに送信するフィルタリスト:", filterList);
+    console.log("Filter list sent to Supabase:", filterList);
 
-    // Supabaseクエリ
+    // Supabase query
     const { data: birds, error: fetchError } = await supabase
       .from("allbirds")
       .select(`"SPECIES_CODE", "SCI_NAME", "PRIMARY_COM_NAME", "FAMILY"`)
       .in("SPECIES_CODE", filterList);
 
     if (fetchError) {
-      console.error("データ取得エラー:", fetchError.message);
+      console.error("Data fetch error:", fetchError.message);
       return;
     }
 
-    console.log("取得したデータ:", birds);
+    console.log("Retrieved data:", birds);
 
-    // データが取得できた場合
+    // If data is retrieved
     if (birds && birds.length > 0) {
       const { error: insertError } = await supabase.from("species").insert(
         birds.map((bird) => ({
-          species_code: bird.SPECIES_CODE, // `SPECIES_CODE` → `species_code`
-          sci_name: bird.SCI_NAME,        // `SCI_NAME` → `sci_name`
-          common_name: bird.PRIMARY_COM_NAME, // `PRIMARY_COM_NAME` → `common_name`
-          family: bird.FAMILY,           // `FAMILY` → `family`
+          species_code: bird.SPECIES_CODE,
+          sci_name: bird.SCI_NAME,
+          common_name: bird.PRIMARY_COM_NAME,
+          family: bird.FAMILY,
         }))
       );
 
       if (insertError) {
-        throw new Error(`データ挿入エラー: ${insertError.message}`);
+        throw new Error(`Data insertion error: ${insertError.message}`);
       }
 
-      console.log("speciesテーブルを更新しました！");
+      console.log("Updated the species table!");
     } else {
-      console.log("該当するデータが見つかりませんでした。");
+      console.log("No matching data found.");
     }
   } catch (error) {
-    console.error("エラー:", error.message);
+    // Ensure error is an instance of Error
+    if (error instanceof Error) {
+      console.error("Error:", error.message);
+    } else {
+      console.error("An unknown error occurred.");
+    }
   }
 };
 
