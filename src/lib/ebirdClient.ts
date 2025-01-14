@@ -119,3 +119,29 @@ export const fetchAndSaveHotspotList = async (regionCode: string): Promise<strin
     throw new Error(`Failed to save CSV data: ${error instanceof Error ? error.message : error}`);
   }
 };
+
+
+/**
+ * 過去7日間の観察データを取得
+ * @param regionCode 地域コード (例: "SG")
+ * @returns 観察データのリスト
+ */
+export const fetchRecentObservations = async (regionCode: string): Promise<any[]> => {
+  if (!EBIRD_API_KEY) {
+    throw new Error("eBird APIキーが設定されていません");
+  }
+
+  const url = `${EBIRD_BASE_URL}/data/obs/${regionCode}/recent/recent?back=7`;
+
+  const response = await fetch(url, {
+    headers: {
+      "X-eBirdApiToken": EBIRD_API_KEY,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`eBird APIのリクエストに失敗しました: ${response.statusText}`);
+  }
+
+  return await response.json();
+};
