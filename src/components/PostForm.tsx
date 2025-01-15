@@ -25,28 +25,17 @@ interface BirdOption {
 type SightingStatus = "sighted" | "unsighted";
 
 interface PostFormProps {
-  // 観察時刻
-  // → 親コンポーネントから受け取る形だが、ここでは自前の例として定義
-  timestamp: string;
-  setTimestamp: (value: string) => void;
-
-  // 緯度・経度など
+  timestamp: string;                               // 観察時刻（初期は空 or 何かの値）
+  setTimestamp: (value: string) => void;           // 親または自身で管理するためのsetter
   lat: string;
   lng: string;
-
-  // 投稿完了・エラーメッセージ
-  message: string;
-
-  // フォーム送信時のハンドラ
-  // 第3引数にstatusを受け取る仕様
+  message: string;                                 // 成功・エラーメッセージ表示
   handleSubmit: (
     e: React.FormEvent,
     selectedOption: BirdOption,
     status: SightingStatus,
     timestampUTC: string
   ) => void;
-
-  // 現在地取得ボタンのハンドラ
   handleGetCurrentLocation: () => void;
 }
 
@@ -64,14 +53,14 @@ const PostForm: React.FC<PostFormProps> = ({
   const [selectedOption, setSelectedOption] = useState<BirdOption | null>(null);
   const [status, setStatus] = useState<SightingStatus>("sighted");
 
-  // マウント時に timestamp が空の場合は「現在時刻(秒msなし)」をセットする例
+  // マウント時に timestamp が空の場合は「現在時刻(秒msなし)」をセット
   useEffect(() => {
     if (!timestamp) {
       setTimestamp(getNowWithoutSeconds());
     }
   }, [timestamp, setTimestamp]);
 
-  // Supabaseから鳥の種類リストを取得する例
+  // Supabaseから鳥の種類リストを取得（例）
   useEffect(() => {
     const fetchSpecies = async () => {
       const { data, error } = await supabase
@@ -88,7 +77,7 @@ const PostForm: React.FC<PostFormProps> = ({
     fetchSpecies();
   }, []);
 
-  // 名前のフィルタリング
+  // 種名のフィルタリング
   const filteredOptions =
     searchTerm.length >= 1
       ? speciesOptions.filter((option) =>
@@ -96,26 +85,21 @@ const PostForm: React.FC<PostFormProps> = ({
         )
       : [];
 
-  // フォーム送信ロジック
+  // 送信
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedOption) return;
 
-    // 1) ユーザーが入力した時刻をDateに変換 (ローカル時刻として扱う)
+    // ユーザーが入力した時刻を Date に変換 (ローカル時刻として扱う)
     const localDate = new Date(timestamp);
 
-    // 2) 未来の日付ならエラー (例: "未来は禁止")
-    const now = new Date();
-    if (localDate.getTime() > now.getTime()) {
-      alert("Cannot submit a future date/time.");
-      return;
-    }
+    // バリデーションで未来は禁止しないので削除
 
-    // 3) DBに保存するときはUTCとして送信
+    // DB に保存するときは UTC として送信
     const timestampUTC = localDate.toISOString(); 
     // 例: "2025-07-25T00:45:00.000Z"
 
-    // 4) 親の handleSubmit に UTC 時刻を渡す
+    // 親の handleSubmit に UTC 時刻を渡す
     handleSubmit(e, selectedOption, status, timestampUTC);
   };
 
@@ -136,8 +120,9 @@ const PostForm: React.FC<PostFormProps> = ({
       <h3 style={{ fontWeight: "bold", marginBottom: "10px" }}>
         Report Your Sighting
       </h3>
+
       <form onSubmit={onSubmit}>
-        {/* 鳥の検索ボックス */}
+        {/* 鳥名検索 */}
         <input
           type="text"
           placeholder="Enter bird name (e.g., Japanese White-eye)"
@@ -153,7 +138,6 @@ const PostForm: React.FC<PostFormProps> = ({
           }}
         />
 
-        {/* 鳥の種候補一覧 */}
         {filteredOptions.length > 0 && (
           <ul
             style={{
@@ -240,7 +224,7 @@ const PostForm: React.FC<PostFormProps> = ({
           </label>
         </div>
 
-        {/* 日時入力: 秒・ミリ秒除去済みを初期値にし、自由に変更可 */}
+        {/* 日時 (秒・ミリ秒なし) */}
         <input
           type="datetime-local"
           value={timestamp}
@@ -255,7 +239,7 @@ const PostForm: React.FC<PostFormProps> = ({
           }}
         />
 
-        {/* 現在地・送信ボタン */}
+        {/* 現在地＆送信ボタン */}
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <button
             type="button"
@@ -288,7 +272,7 @@ const PostForm: React.FC<PostFormProps> = ({
         </div>
       </form>
 
-      {/* エラーメッセージや成功メッセージ */}
+      {/* メッセージ（成功・失敗など） */}
       {message && (
         <p
           style={{
