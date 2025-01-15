@@ -4,17 +4,20 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import formatDate from "../utils/formatDate";
 
+interface Sighting {
+  id: number;
+  location: { lat: number; lng: number };
+  common_name: string;
+  sci_name: string;
+  timestamp: string;
+  status: string; // "sighted" or "unsighted"
+}
+
 interface MapProps {
   mapContainerStyle: React.CSSProperties;
   center: { lat: number; lng: number };
   currentLocation: { lat: number; lng: number } | null;
-  sightings: {
-    id: number;
-    location: { lat: number; lng: number };
-    common_name: string;
-    sci_name: string;
-    timestamp: string;
-  }[];
+  sightings: Sighting[];
   selectedSighting: { lat: number; lng: number } | null;
   setSelectedSighting: React.Dispatch<
     React.SetStateAction<{ lat: number; lng: number } | null>
@@ -39,6 +42,7 @@ const Map: React.FC<MapProps> = ({
   setSelectedSighting,
   handleMarkerDragEnd,
 }) => {
+  // --- 現在地マーカーを描画 ---
   const renderCurrentLocationMarker = () => {
     if (!currentLocation) return null;
 
@@ -66,6 +70,7 @@ const Map: React.FC<MapProps> = ({
     );
   };
 
+  // --- 観察記録マーカーを描画 ---
   const renderSightingsMarkers = () => {
     return sightings.map((sighting) => (
       <Marker
@@ -75,26 +80,29 @@ const Map: React.FC<MapProps> = ({
           click: () => setSelectedSighting(sighting.location),
         }}
       >
+        {/* マーカーが選択状態の場合のみPopupを表示 */}
         {selectedSighting?.lat === sighting.location.lat &&
           selectedSighting?.lng === sighting.location.lng && (
             <Popup>
               <div style={{ maxHeight: "200px", overflowY: "auto" }}>
+                {/** 同じ場所のsightingをまとめて表示（複数ある場合） */}
                 {sightings
                   .filter(
                     (s) =>
                       s.location.lat === sighting.location.lat &&
                       s.location.lng === sighting.location.lng
                   )
-                  .map((s, index) => (
+                  .map((s, index, arr) => (
                     <div
                       key={index}
                       style={{
                         marginBottom: "10px",
                         borderBottom:
-                          index !== sightings.length - 1 ? "1px solid #ddd" : "none",
+                          index !== arr.length - 1 ? "1px solid #ddd" : "none",
                         paddingBottom: "10px",
                       }}
                     >
+                      {/* ステータス ＋ 日時を強調表示 */}
                       <h4
                         style={{
                           margin: "0 0 5px 0",
@@ -102,8 +110,12 @@ const Map: React.FC<MapProps> = ({
                           color: "#000",
                         }}
                       >
-                        {s.common_name}
+                        {/* status が "unsighted" なら "Unsighted on ...", それ以外なら "Sighted on ..." */}
+                        {s.status === "unsighted" ? "Unsighted" : "Sighted"} on{" "}
+                        {formatDate(s.timestamp)}
                       </h4>
+
+                      {/* 種名（和名 + 学名） */}
                       <p
                         style={{
                           margin: 0,
@@ -111,16 +123,7 @@ const Map: React.FC<MapProps> = ({
                           color: "#555",
                         }}
                       >
-                        {s.sci_name}
-                      </p>
-                      <p
-                        style={{
-                          margin: "5px 0 0 0",
-                          fontSize: "12px",
-                          color: "#666",
-                        }}
-                      >
-                        {formatDate(s.timestamp)}
+                        {s.common_name} ({s.sci_name})
                       </p>
                     </div>
                   ))}
@@ -140,9 +143,15 @@ const Map: React.FC<MapProps> = ({
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">
+            OpenStreetMap
+          </a> contributors'
         />
+
+        {/* 現在地の赤マーカー */}
         {renderCurrentLocationMarker()}
+
+        {/* 観察記録のマーカーたち */}
         {renderSightingsMarkers()}
       </MapContainer>
     </div>

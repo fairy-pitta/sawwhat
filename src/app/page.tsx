@@ -4,12 +4,11 @@ import { useState, useEffect } from "react";
 import L from "leaflet";
 import { supabase } from "@/lib/supabaseClient";
 
-// Leafletを使ったカスタムコンポーネント
-import Map from "@/components/Map";         // <-- Leaflet版Mapコンポーネントを使う
+// Leafletベースのコンポーネント
+import Map from "@/components/Map";
 import PostForm from "@/components/PostForm";
 import FilterSidebar from "@/components/FilterSidebar";
 
-// 地図のスタイル
 const mapContainerStyle = {
   width: "100%",
   height: "100%",
@@ -22,25 +21,22 @@ const center = {
 };
 
 export default function HomePage() {
-  // 投稿フォーム用の日時
   const [timestamp, setTimestamp] = useState(
     new Date().toISOString().slice(0, -1)
   );
 
-  // フォーム送信用の緯度・経度（文字列）
+  // フォーム送信用の緯度・経度
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
-
-  // 成功・エラーメッセージを表示するための状態
   const [message, setMessage] = useState("");
 
-  // 地図コンポーネント用の現在地（オブジェクト）。ドラッグなどで更新される
+  // 地図コンポーネント用に保持する現在地
   const [currentLocation, setCurrentLocation] = useState<{
     lat: number;
     lng: number;
   } | null>(null);
 
-  // 取得した観察記録リスト
+  // 観察記録一覧
   const [sightings, setSightings] = useState<
     {
       id: number;
@@ -48,24 +44,23 @@ export default function HomePage() {
       common_name: string;
       sci_name: string;
       timestamp: string;
+      // statusがある場合はここに追加してもよい
     }[]
   >([]);
 
-  // クリックされた観察記録の位置（マーカー選択用）
+  // 選択中の観察記録
   const [selectedSighting, setSelectedSighting] = useState<{
     lat: number;
     lng: number;
   } | null>(null);
 
-  // 種名によるフィルターの状態（例：FilterSidebarで選択された鳥の和名・学名）
+  // フィルター（和名・学名）
   const [filter, setFilter] = useState<{
     common_name: string;
     sci_name: string;
   } | null>(null);
 
-  /**
-   * 1. ページマウント時にブラウザのジオロケーションで現在地を取得
-   */
+  // 初回マウント時に現在地を取得
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -84,14 +79,12 @@ export default function HomePage() {
     }
   }, []);
 
-  /**
-   * 2. Supabaseから`sightings`テーブルの観察記録を取得
-   */
+  // Supabaseから既存のsightingsを取得
   useEffect(() => {
     const fetchSightings = async () => {
       const { data, error } = await supabase
         .from("sightings")
-        .select("id, location, common_name, sci_name, timestamp");
+        .select("id, location, common_name, sci_name, timestamp, status");
 
       if (error) {
         console.error("Failed to fetch sightings:", error.message);
@@ -103,9 +96,7 @@ export default function HomePage() {
     fetchSightings();
   }, []);
 
-  /**
-   * 3. フィルターで絞り込み（和名・学名が完全一致する観察のみ表示）
-   */
+  // フィルター適用
   const filteredSightings = filter
     ? sightings.filter(
         (s) =>
@@ -113,10 +104,7 @@ export default function HomePage() {
       )
     : sightings;
 
-  /**
-   * 4. マーカーをドラッグし終わった後に呼ばれる関数
-   *    Leafletの`dragend`イベントから座標を取得する
-   */
+  // マーカーをドラッグ終了時に呼ばれる（Leafletのdragendイベント）
   const handleMarkerDragEnd = (event: L.LeafletEvent) => {
     const marker = event.target as L.Marker;
     const { lat: newLat, lng: newLng } = marker.getLatLng();
@@ -129,7 +117,7 @@ export default function HomePage() {
 
   return (
     <div style={{ position: "relative", height: "100vh", width: "100vw" }}>
-      {/* LeafletベースのMapコンポーネント */}
+      {/* Leafletの地図表示 */}
       <Map
         mapContainerStyle={mapContainerStyle}
         center={center}
@@ -137,7 +125,6 @@ export default function HomePage() {
         sightings={filteredSightings}
         selectedSighting={selectedSighting}
         setSelectedSighting={setSelectedSighting}
-        // 親コンポーネントで定義したドラッグ完了イベントを渡す
         handleMarkerDragEnd={handleMarkerDragEnd}
       />
 
@@ -148,8 +135,8 @@ export default function HomePage() {
         lat={lat}
         lng={lng}
         message={message}
-        // Postボタン押下時の処理
-        handleSubmit={(e, selectedOption) => {
+        // ← statusが追加されたので、第3引数として受け取る
+        handleSubmit={(e, selectedOption, status) => {
           e.preventDefault();
           if (!selectedOption || !lat || !lng) {
             setMessage("Please fill in all the required fields.");
@@ -158,7 +145,6 @@ export default function HomePage() {
 
           const { common_name, sci_name, species_code } = selectedOption;
 
-          // Supabaseへのデータ挿入
           supabase
             .from("sightings")
             .insert([
@@ -168,6 +154,7 @@ export default function HomePage() {
                 sci_name,
                 location: { lat: parseFloat(lat), lng: parseFloat(lng) },
                 timestamp,
+                status, // ← ここでstatusも挿入！
               },
             ])
             .then(({ error }) => {
@@ -178,10 +165,9 @@ export default function HomePage() {
               }
             });
 
-          // 5秒後にメッセージをクリア
+          // 5秒後にメッセージをリセット
           setTimeout(() => setMessage(""), 5000);
         }}
-        // 現在地ボタン押下時の処理
         handleGetCurrentLocation={() => {
           if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
@@ -201,7 +187,7 @@ export default function HomePage() {
         }}
       />
 
-      {/* フィルター用サイドバー */}
+      {/* フィルターサイドバー */}
       <FilterSidebar setFilter={setFilter} />
     </div>
   );

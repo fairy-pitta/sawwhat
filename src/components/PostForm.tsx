@@ -1,18 +1,52 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
-import Image from "next/image";
 import { supabase } from "@/lib/supabaseClient";
 
+/** 
+ * 現在のローカル時刻を取得し、秒・ミリ秒を除外した
+ * "YYYY-MM-DDTHH:mm" 形式の文字列を返す
+ */
+function getNowWithoutSeconds(): string {
+  const now = new Date();
+  now.setSeconds(0);
+  now.setMilliseconds(0);
+  return now.toISOString().slice(0, 16);
+}
+
+// 鳥の種情報
+interface BirdOption {
+  common_name: string;
+  sci_name: string;
+  species_code: string;
+}
+
+// 観察ステータス ("sighted" or "unsighted")
+type SightingStatus = "sighted" | "unsighted";
+
 interface PostFormProps {
+  // 観察時刻
+  // → 親コンポーネントから受け取る形だが、ここでは自前の例として定義
   timestamp: string;
   setTimestamp: (value: string) => void;
+
+  // 緯度・経度など
   lat: string;
   lng: string;
+
+  // 投稿完了・エラーメッセージ
   message: string;
+
+  // フォーム送信時のハンドラ
+  // 第3引数にstatusを受け取る仕様
   handleSubmit: (
     e: React.FormEvent,
-    selectedOption: { common_name: string; sci_name: string; species_code: string },
-    status: string
+    selectedOption: BirdOption,
+    status: SightingStatus,
+    timestampUTC: string
   ) => void;
+
+  // 現在地取得ボタンのハンドラ
   handleGetCurrentLocation: () => void;
 }
 
@@ -25,17 +59,19 @@ const PostForm: React.FC<PostFormProps> = ({
   handleSubmit,
   handleGetCurrentLocation,
 }) => {
-  const [speciesOptions, setSpeciesOptions] = useState<
-    { common_name: string; sci_name: string; species_code: string }[]
-  >([]);
+  const [speciesOptions, setSpeciesOptions] = useState<BirdOption[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedOption, setSelectedOption] = useState<{
-    common_name: string;
-    sci_name: string;
-    species_code: string;
-  } | null>(null);
-  const [status, setStatus] = useState("sighted");
+  const [selectedOption, setSelectedOption] = useState<BirdOption | null>(null);
+  const [status, setStatus] = useState<SightingStatus>("sighted");
 
+  // マウント時に timestamp が空の場合は「現在時刻(秒msなし)」をセットする例
+  useEffect(() => {
+    if (!timestamp) {
+      setTimestamp(getNowWithoutSeconds());
+    }
+  }, [timestamp, setTimestamp]);
+
+  // Supabaseから鳥の種類リストを取得する例
   useEffect(() => {
     const fetchSpecies = async () => {
       const { data, error } = await supabase
@@ -52,6 +88,7 @@ const PostForm: React.FC<PostFormProps> = ({
     fetchSpecies();
   }, []);
 
+  // 名前のフィルタリング
   const filteredOptions =
     searchTerm.length >= 1
       ? speciesOptions.filter((option) =>
@@ -59,13 +96,27 @@ const PostForm: React.FC<PostFormProps> = ({
         )
       : [];
 
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString("en-SG", {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "Asia/Singapore",
-    });
+  // フォーム送信ロジック
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedOption) return;
+
+    // 1) ユーザーが入力した時刻をDateに変換 (ローカル時刻として扱う)
+    const localDate = new Date(timestamp);
+
+    // 2) 未来の日付ならエラー (例: "未来は禁止")
+    const now = new Date();
+    if (localDate.getTime() > now.getTime()) {
+      alert("Cannot submit a future date/time.");
+      return;
+    }
+
+    // 3) DBに保存するときはUTCとして送信
+    const timestampUTC = localDate.toISOString(); 
+    // 例: "2025-07-25T00:45:00.000Z"
+
+    // 4) 親の handleSubmit に UTC 時刻を渡す
+    handleSubmit(e, selectedOption, status, timestampUTC);
   };
 
   return (
@@ -82,14 +133,11 @@ const PostForm: React.FC<PostFormProps> = ({
         color: "#333",
       }}
     >
-      <h3 style={{ fontWeight: "bold", marginBottom: "10px" }}>Report Your Sighting</h3>
-      <form
-        onSubmit={(e) => {
-          if (selectedOption) {
-            handleSubmit(e, selectedOption, status);
-          }
-        }}
-      >
+      <h3 style={{ fontWeight: "bold", marginBottom: "10px" }}>
+        Report Your Sighting
+      </h3>
+      <form onSubmit={onSubmit}>
+        {/* 鳥の検索ボックス */}
         <input
           type="text"
           placeholder="Enter bird name (e.g., Japanese White-eye)"
@@ -104,6 +152,8 @@ const PostForm: React.FC<PostFormProps> = ({
             borderRadius: "5px",
           }}
         />
+
+        {/* 鳥の種候補一覧 */}
         {filteredOptions.length > 0 && (
           <ul
             style={{
@@ -146,14 +196,18 @@ const PostForm: React.FC<PostFormProps> = ({
                     style={{
                       fontStyle: "italic",
                       color:
-                        selectedOption?.species_code === option.species_code ? "white" : "#333",
+                        selectedOption?.species_code === option.species_code
+                          ? "white"
+                          : "#333",
                     }}
                   >
                     ({option.sci_name})
                   </span>
                 </span>
                 {selectedOption?.species_code === option.species_code && (
-                  <span style={{ marginLeft: "10px", color: "white", fontWeight: "bold" }}>
+                  <span
+                    style={{ marginLeft: "10px", color: "white", fontWeight: "bold" }}
+                  >
                     ✔
                   </span>
                 )}
@@ -161,6 +215,8 @@ const PostForm: React.FC<PostFormProps> = ({
             ))}
           </ul>
         )}
+
+        {/* 観察ステータス */}
         <div style={{ marginBottom: "10px" }}>
           <label style={{ marginRight: "10px" }}>
             <input
@@ -183,6 +239,8 @@ const PostForm: React.FC<PostFormProps> = ({
             Unsighted
           </label>
         </div>
+
+        {/* 日時入力: 秒・ミリ秒除去済みを初期値にし、自由に変更可 */}
         <input
           type="datetime-local"
           value={timestamp}
@@ -196,6 +254,8 @@ const PostForm: React.FC<PostFormProps> = ({
             borderRadius: "5px",
           }}
         />
+
+        {/* 現在地・送信ボタン */}
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <button
             type="button"
@@ -227,6 +287,8 @@ const PostForm: React.FC<PostFormProps> = ({
           </button>
         </div>
       </form>
+
+      {/* エラーメッセージや成功メッセージ */}
       {message && (
         <p
           style={{
