@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { FaCrosshairs } from "react-icons/fa"; // 船の舵アイコン
 
 // 鳥の種情報
 interface BirdOption {
@@ -14,25 +15,18 @@ interface BirdOption {
 type SightingStatus = "sighted" | "unsighted";
 
 interface PostFormProps {
-  /**
-   * シンガポール時間 (YYYY-MM-DDTHH:mm) 形式
-   */
   timestamp: string;
   setTimestamp: (value: string) => void;
   lat: string;
   lng: string;
   message: string;
-  /**
-   * 第4引数としてSGタイム (YYYY-MM-DDTHH:mm) をそのまま受け取り、
-   * Supabase へ保存する想定
-   */
   handleSubmit: (
     e: React.FormEvent,
     selectedOption: BirdOption,
     status: SightingStatus,
     timestampSG: string
   ) => void;
-  handleGetCurrentLocation: () => void;
+  handleGetCurrentLocation: () => void; // ← この関数を呼び出す
 }
 
 const PostForm: React.FC<PostFormProps> = ({
@@ -49,9 +43,7 @@ const PostForm: React.FC<PostFormProps> = ({
   const [selectedOption, setSelectedOption] = useState<BirdOption | null>(null);
   const [status, setStatus] = useState<SightingStatus>("sighted");
 
-  console.log("timestamp", timestamp)
-
-  // Supabase から鳥の種類リストを取得
+  // 初回、鳥の種類リストを取得
   useEffect(() => {
     const fetchSpecies = async () => {
       const { data, error } = await supabase
@@ -64,7 +56,6 @@ const PostForm: React.FC<PostFormProps> = ({
         setSpeciesOptions(data || []);
       }
     };
-
     fetchSpecies();
   }, []);
 
@@ -76,12 +67,10 @@ const PostForm: React.FC<PostFormProps> = ({
         )
       : [];
 
-  // フォーム送信
+  // 送信
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedOption) return;
-
-    // SGタイムをそのまま handleSubmit に渡す
     handleSubmit(e, selectedOption, status, timestamp);
   };
 
@@ -106,7 +95,7 @@ const PostForm: React.FC<PostFormProps> = ({
         {/* 鳥の種名検索 */}
         <input
           type="text"
-          placeholder="Enter bird name (e.g., Japanese White-eye)"
+          placeholder="Enter bird name"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           required
@@ -172,11 +161,7 @@ const PostForm: React.FC<PostFormProps> = ({
                 </span>
                 {selectedOption?.species_code === option.species_code && (
                   <span
-                    style={{
-                      marginLeft: "10px",
-                      color: "white",
-                      fontWeight: "bold",
-                    }}
+                    style={{ marginLeft: "10px", color: "white", fontWeight: "bold" }}
                   >
                     ✔
                   </span>
@@ -210,7 +195,7 @@ const PostForm: React.FC<PostFormProps> = ({
           </label>
         </div>
 
-        {/* 日時: SGタイム (YYYY-MM-DDTHH:mm) */}
+        {/* 日時 */}
         <input
           type="datetime-local"
           value={timestamp}
@@ -225,22 +210,22 @@ const PostForm: React.FC<PostFormProps> = ({
           }}
         />
 
-        {/* 現在地 / Post */}
+        {/* 下段のボタン類 */}
         <div style={{ display: "flex", justifyContent: "space-between" }}>
+          {/* 現在地ボタンを舵アイコンだけにする */}
           <button
             type="button"
             onClick={handleGetCurrentLocation}
             style={{
-              padding: "10px",
-              backgroundColor: "#218838",
-              color: "white",
+              background: "none",
               border: "none",
-              borderRadius: "5px",
               cursor: "pointer",
             }}
           >
-            Current Location
+            <FaCrosshairs size={24} color="#007bff" />
           </button>
+
+          {/* Submit */}
           <button
             type="submit"
             style={{

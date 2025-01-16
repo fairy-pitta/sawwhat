@@ -7,6 +7,10 @@ import dynamic from "next/dynamic";
 
 import PostForm from "@/components/PostForm";
 import FilterSidebar from "@/components/FilterSidebar";
+import ReloadButton from "@/components/ReloadButton";
+
+// リロード用アイコン・現在地アイコン
+import { FaSyncAlt, FaCrosshairs } from "react-icons/fa";
 
 // ★ Map は動的インポートで ssr: false を指定
 const Map = dynamic(() => import("@/components/Map"), {
@@ -18,6 +22,8 @@ const getSGNowForDateTimeLocal = (): string => {
   // 1. 現在のUTC時刻(ミリ秒)を取得
   const nowUtc = Date.now();
 
+  // 今はUTC+8を足していない状態だが、ローカルタイムがシンガポールなら合致
+  // 必要に応じてここで +8h するとより確実にSGTになる
   const sgNow = nowUtc;
 
   // 3. Date オブジェクトを生成
@@ -88,8 +94,22 @@ export default function HomePage() {
     sci_name: string;
   } | null>(null);
 
-  // 初回マウント時に現在地を取得
+  // ========== sightingsを取得する関数 ==========
+  const fetchSightings = async () => {
+    const { data, error } = await supabase
+      .from("sightings")
+      .select("id, location, common_name, sci_name, timestamp, status");
+
+    if (error) {
+      console.error("Failed to fetch sightings:", error.message);
+    } else {
+      setSightings(data || []);
+    }
+  };
+
+  // 初回マウント時に現在地を取得 & sightingsを取得
   useEffect(() => {
+    // 1) 現在地
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -105,22 +125,8 @@ export default function HomePage() {
         }
       );
     }
-  }, []);
 
-  // Supabaseから既存のsightingsを取得
-  useEffect(() => {
-    const fetchSightings = async () => {
-      const { data, error } = await supabase
-        .from("sightings")
-        .select("id, location, common_name, sci_name, timestamp, status");
-
-      if (error) {
-        console.error("Failed to fetch sightings:", error.message);
-      } else {
-        setSightings(data || []);
-      }
-    };
-
+    // 2) sightings
     fetchSightings();
   }, []);
 
@@ -143,6 +149,25 @@ export default function HomePage() {
     setCurrentLocation({ lat: newLat, lng: newLng });
   };
 
+  // ========== 現在地ボタンを押したときの処理 ==========
+  const handleGetCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const latitude = position.coords.latitude;
+          const longitude = position.coords.longitude;
+          setLat(latitude.toString());
+          setLng(longitude.toString());
+          setCurrentLocation({ lat: latitude, lng: longitude });
+        },
+        (error) => {
+          console.error("Failed to retrieve current location:", error);
+          setMessage("Could not get current location.");
+        }
+      );
+    }
+  };
+
   return (
     <div style={{ position: "relative", height: "100vh", width: "100vw" }}>
       {/* Leafletの地図表示 */}
@@ -155,6 +180,28 @@ export default function HomePage() {
         setSelectedSighting={setSelectedSighting}
         handleMarkerDragEnd={handleMarkerDragEnd}
       />
+
+      {/* --- 右下 リロードボタン (FaSyncAlt) --- */}
+      <ReloadButton fetchSightings={fetchSightings} />
+
+      {/* --- 右下 現在地ボタン (FaCrosshairs) --- */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: "10px",
+          right: "10px",
+          zIndex: 9999,
+          background: "white",
+          borderRadius: "50%",
+          padding: "8px",
+          cursor: "pointer",
+          boxShadow: "0px 2px 5px rgba(0,0,0,0.3)",
+        }}
+        onClick={handleGetCurrentLocation}
+        title="Get current location"
+      >
+        <FaCrosshairs size={20} color="#007bff" />
+      </div>
 
       {/* 投稿フォーム */}
       <PostForm
@@ -189,29 +236,15 @@ export default function HomePage() {
                 setMessage(`Failed to submit: ${error.message}`);
               } else {
                 setMessage("Submission successful!");
+                // 送信成功後にリロード
+                fetchSightings();
               }
             });
 
           // 5秒後にメッセージをリセット
           setTimeout(() => setMessage(""), 5000);
         }}
-        handleGetCurrentLocation={() => {
-          if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-              (position) => {
-                const latitude = position.coords.latitude;
-                const longitude = position.coords.longitude;
-                setLat(latitude.toString());
-                setLng(longitude.toString());
-                setCurrentLocation({ lat: latitude, lng: longitude });
-              },
-              (error) => {
-                console.error("Failed to retrieve current location:", error);
-                setMessage("Could not get current location.");
-              }
-            );
-          }
-        }}
+        handleGetCurrentLocation={handleGetCurrentLocation}
       />
 
       {/* フィルターサイドバー */}

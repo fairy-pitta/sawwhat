@@ -1,10 +1,14 @@
-"use client";  // ★ これでクライアントコンポーネント化
+"use client";
 
 import React from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import formatDate from "../utils/formatDate";
+
+// ▼ アイコンのimport
+import { FiRefreshCw } from "react-icons/fi";   // リロード用アイコン
+import { GiShipWheel } from "react-icons/gi";  // 船の舵アイコン
 
 interface Sighting {
   id: number;
@@ -25,14 +29,17 @@ interface MapProps {
     React.SetStateAction<{ lat: number; lng: number } | null>
   >;
   handleMarkerDragEnd: (event: L.LeafletEvent) => void;
+
+  // ★ 追加: 現在地を取得する関数をMapコンポーネントでも使えるように受け取る
+  handleGetCurrentLocation: () => void;
 }
 
-// Set default icon for Leaflet
+// Leaflet デフォルトアイコンの設定
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconUrl: "/marker-icon-green.png", // Default green marker icon
-  iconRetinaUrl: "/marker-icon-2x-green.png", // Retina version (optional)
-  shadowUrl: "/marker-shadow.png", // Shadow image
+  iconUrl: "/marker-icon-green.png",
+  iconRetinaUrl: "/marker-icon-2x-green.png",
+  shadowUrl: "/marker-shadow.png",
 });
 
 const Map: React.FC<MapProps> = ({
@@ -43,8 +50,12 @@ const Map: React.FC<MapProps> = ({
   selectedSighting,
   setSelectedSighting,
   handleMarkerDragEnd,
+  // ★ 追加
+  handleGetCurrentLocation,
 }) => {
-  // 現在地マーカーの描画
+  // ------------------------------------
+  // 現在地マーカー
+  // ------------------------------------
   const renderCurrentLocationMarker = () => {
     if (!currentLocation) return null;
 
@@ -71,7 +82,9 @@ const Map: React.FC<MapProps> = ({
     );
   };
 
-  // 観察記録のマーカーを描画
+  // ------------------------------------
+  // 観察記録マーカー
+  // ------------------------------------
   const renderSightingsMarkers = () => {
     return sightings.map((sighting) => (
       <Marker
@@ -85,41 +98,29 @@ const Map: React.FC<MapProps> = ({
           selectedSighting?.lng === sighting.location.lng && (
             <Popup>
               <div style={{ maxHeight: "200px", overflowY: "auto" }}>
+                {/* 同じ緯度経度をもつSightingをまとめて表示 */}
                 {sightings
                   .filter(
                     (s) =>
                       s.location.lat === sighting.location.lat &&
                       s.location.lng === sighting.location.lng
                   )
-                  .map((s, index, arr) => (
+                  .map((s) => (
                     <div
-                      key={index}
+                      key={s.id}
                       style={{
                         marginBottom: "10px",
-                        borderBottom:
-                          index !== arr.length - 1 ? "1px solid #ddd" : "none",
+                        borderBottom: "1px solid #ddd",
                         paddingBottom: "10px",
                       }}
                     >
-                      {/* ステータス + 日時 */}
-                      <h4
-                        style={{
-                          margin: "0 0 5px 0",
-                          fontWeight: "bold",
-                          color: "#000",
-                        }}
-                      >
+                      {/* 状態 + 日時 */}
+                      <h4 style={{ margin: "0 0 5px", fontWeight: "bold" }}>
                         {s.status === "unsighted" ? "Unsighted" : "Sighted"} on{" "}
                         {formatDate(s.timestamp)}
                       </h4>
-                      {/* 種名 (和名 + 学名) */}
-                      <p
-                        style={{
-                          margin: 0,
-                          fontStyle: "italic",
-                          color: "#555",
-                        }}
-                      >
+                      {/* 名前 */}
+                      <p style={{ margin: 0, fontStyle: "italic", color: "#555" }}>
                         {s.common_name} ({s.sci_name})
                       </p>
                     </div>
@@ -132,12 +133,9 @@ const Map: React.FC<MapProps> = ({
   };
 
   return (
-    <div style={{ ...mapContainerStyle, height: "100vh" }}>
-      <MapContainer
-        center={[center.lat, center.lng]}
-        zoom={12}
-        style={{ width: "100%", height: "100%" }}
-      >
+    <div style={{ ...mapContainerStyle, height: "100vh", position: "relative" }}>
+
+      <MapContainer center={[center.lat, center.lng]} zoom={12} style={{ width: "100%", height: "100%" }}>
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">
