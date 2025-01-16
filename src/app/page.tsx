@@ -3,11 +3,39 @@
 import { useState, useEffect } from "react";
 import L from "leaflet";
 import { supabase } from "@/lib/supabaseClient";
+import dynamic from "next/dynamic";
 
-// Leafletベースのコンポーネント
-import Map from "@/components/Map";
 import PostForm from "@/components/PostForm";
 import FilterSidebar from "@/components/FilterSidebar";
+
+// ★ Map は動的インポートで ssr: false を指定
+const Map = dynamic(() => import("@/components/Map"), {
+  ssr: false,
+});
+
+// 「YYYY-MM-DDTHH:mm」形式で返すシンガポール時間
+const getSGNowForDateTimeLocal = (): string => {
+  // 1. 現在のUTC時刻(ミリ秒)を取得
+  const nowUtc = Date.now();
+
+  const sgNow = nowUtc;
+
+  // 3. Date オブジェクトを生成
+  const sgDate = new Date(sgNow);
+
+  // 4. 秒とミリ秒をゼロにする
+  sgDate.setSeconds(0);
+  sgDate.setMilliseconds(0);
+
+  // 5. "YYYY-MM-DDTHH:mm" 形式で返す
+  const yyyy = sgDate.getFullYear();
+  const MM = String(sgDate.getMonth() + 1).padStart(2, "0");
+  const dd = String(sgDate.getDate()).padStart(2, "0");
+  const hh = String(sgDate.getHours()).padStart(2, "0");
+  const mm = String(sgDate.getMinutes()).padStart(2, "0");
+
+  return `${yyyy}-${MM}-${dd}T${hh}:${mm}`;
+};
 
 const mapContainerStyle = {
   width: "100%",
@@ -21,9 +49,9 @@ const center = {
 };
 
 export default function HomePage() {
-  const [timestamp, setTimestamp] = useState(
-    new Date().toISOString().slice(0, -1)
-  );
+  // 初期値をシンガポールの現在日時に
+  const [timestamp, setTimestamp] = useState(getSGNowForDateTimeLocal());
+  console.log(timestamp, "page.tsx");
 
   // フォーム送信用の緯度・経度
   const [lat, setLat] = useState("");
@@ -44,7 +72,7 @@ export default function HomePage() {
       common_name: string;
       sci_name: string;
       timestamp: string;
-      // statusがある場合はここに追加してもよい
+      status?: string;
     }[]
   >([]);
 
@@ -100,7 +128,8 @@ export default function HomePage() {
   const filteredSightings = filter
     ? sightings.filter(
         (s) =>
-          s.common_name === filter.common_name && s.sci_name === filter.sci_name
+          s.common_name === filter.common_name &&
+          s.sci_name === filter.sci_name
       )
     : sightings;
 
@@ -112,7 +141,6 @@ export default function HomePage() {
     setLat(newLat.toString());
     setLng(newLng.toString());
     setCurrentLocation({ lat: newLat, lng: newLng });
-    console.log("Marker dragged to:", newLat, newLng);
   };
 
   return (
@@ -135,8 +163,7 @@ export default function HomePage() {
         lat={lat}
         lng={lng}
         message={message}
-        // ← statusが追加されたので、第3引数として受け取る
-        handleSubmit={(e, selectedOption, status) => {
+        handleSubmit={(e, selectedOption, status, timestampSG) => {
           e.preventDefault();
           if (!selectedOption || !lat || !lng) {
             setMessage("Please fill in all the required fields.");
@@ -153,8 +180,8 @@ export default function HomePage() {
                 common_name,
                 sci_name,
                 location: { lat: parseFloat(lat), lng: parseFloat(lng) },
-                timestamp,
-                status, // ← ここでstatusも挿入！
+                timestamp: timestampSG, // 受け取った SGタイムをそのまま渡す
+                status,
               },
             ])
             .then(({ error }) => {

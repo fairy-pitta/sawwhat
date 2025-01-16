@@ -1,3 +1,5 @@
+"use client";  // ★ これでクライアントコンポーネント化
+
 import React from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
@@ -42,13 +44,12 @@ const Map: React.FC<MapProps> = ({
   setSelectedSighting,
   handleMarkerDragEnd,
 }) => {
-  // --- 現在地マーカーを描画 ---
+  // 現在地マーカーの描画
   const renderCurrentLocationMarker = () => {
     if (!currentLocation) return null;
 
-    // Custom red marker icon for current location
     const currentLocationIcon = new L.Icon({
-      iconUrl: "/marker-icon-red.png", // Path to red marker icon
+      iconUrl: "/marker-icon-red.png",
       iconSize: [25, 41],
       iconAnchor: [12, 41],
       popupAnchor: [1, -34],
@@ -62,7 +63,7 @@ const Map: React.FC<MapProps> = ({
         draggable={true}
         zIndexOffset={1000}
         eventHandlers={{
-          dragend: (event) => handleMarkerDragEnd(event),
+          dragend: handleMarkerDragEnd,
         }}
       >
         <Popup>Your current location</Popup>
@@ -70,7 +71,7 @@ const Map: React.FC<MapProps> = ({
     );
   };
 
-  // --- 観察記録マーカーを描画 ---
+  // 観察記録のマーカーを描画
   const renderSightingsMarkers = () => {
     return sightings.map((sighting) => (
       <Marker
@@ -80,12 +81,10 @@ const Map: React.FC<MapProps> = ({
           click: () => setSelectedSighting(sighting.location),
         }}
       >
-        {/* マーカーが選択状態の場合のみPopupを表示 */}
         {selectedSighting?.lat === sighting.location.lat &&
           selectedSighting?.lng === sighting.location.lng && (
             <Popup>
               <div style={{ maxHeight: "200px", overflowY: "auto" }}>
-                {/** 同じ場所のsightingをまとめて表示（複数ある場合） */}
                 {sightings
                   .filter(
                     (s) =>
@@ -102,7 +101,7 @@ const Map: React.FC<MapProps> = ({
                         paddingBottom: "10px",
                       }}
                     >
-                      {/* ステータス ＋ 日時を強調表示 */}
+                      {/* ステータス + 日時 */}
                       <h4
                         style={{
                           margin: "0 0 5px 0",
@@ -110,12 +109,10 @@ const Map: React.FC<MapProps> = ({
                           color: "#000",
                         }}
                       >
-                        {/* status が "unsighted" なら "Unsighted on ...", それ以外なら "Sighted on ..." */}
                         {s.status === "unsighted" ? "Unsighted" : "Sighted"} on{" "}
                         {formatDate(s.timestamp)}
                       </h4>
-
-                      {/* 種名（和名 + 学名） */}
+                      {/* 種名 (和名 + 学名) */}
                       <p
                         style={{
                           margin: 0,
@@ -148,10 +145,7 @@ const Map: React.FC<MapProps> = ({
           </a> contributors'
         />
 
-        {/* 現在地の赤マーカー */}
         {renderCurrentLocationMarker()}
-
-        {/* 観察記録のマーカーたち */}
         {renderSightingsMarkers()}
       </MapContainer>
     </div>

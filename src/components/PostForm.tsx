@@ -3,17 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
-/** 
- * 現在のローカル時刻を取得し、秒・ミリ秒を除外した
- * "YYYY-MM-DDTHH:mm" 形式の文字列を返す
- */
-function getNowWithoutSeconds(): string {
-  const now = new Date();
-  now.setSeconds(0);
-  now.setMilliseconds(0);
-  return now.toISOString().slice(0, 16);
-}
-
 // 鳥の種情報
 interface BirdOption {
   common_name: string;
@@ -21,20 +10,27 @@ interface BirdOption {
   species_code: string;
 }
 
-// 観察ステータス ("sighted" or "unsighted")
+// 観察ステータス
 type SightingStatus = "sighted" | "unsighted";
 
 interface PostFormProps {
-  timestamp: string;                               // 観察時刻（初期は空 or 何かの値）
-  setTimestamp: (value: string) => void;           // 親または自身で管理するためのsetter
+  /**
+   * シンガポール時間 (YYYY-MM-DDTHH:mm) 形式
+   */
+  timestamp: string;
+  setTimestamp: (value: string) => void;
   lat: string;
   lng: string;
-  message: string;                                 // 成功・エラーメッセージ表示
+  message: string;
+  /**
+   * 第4引数としてSGタイム (YYYY-MM-DDTHH:mm) をそのまま受け取り、
+   * Supabase へ保存する想定
+   */
   handleSubmit: (
     e: React.FormEvent,
     selectedOption: BirdOption,
     status: SightingStatus,
-    timestampUTC: string
+    timestampSG: string
   ) => void;
   handleGetCurrentLocation: () => void;
 }
@@ -53,14 +49,9 @@ const PostForm: React.FC<PostFormProps> = ({
   const [selectedOption, setSelectedOption] = useState<BirdOption | null>(null);
   const [status, setStatus] = useState<SightingStatus>("sighted");
 
-  // マウント時に timestamp が空の場合は「現在時刻(秒msなし)」をセット
-  useEffect(() => {
-    if (!timestamp) {
-      setTimestamp(getNowWithoutSeconds());
-    }
-  }, [timestamp, setTimestamp]);
+  console.log("timestamp", timestamp)
 
-  // Supabaseから鳥の種類リストを取得（例）
+  // Supabase から鳥の種類リストを取得
   useEffect(() => {
     const fetchSpecies = async () => {
       const { data, error } = await supabase
@@ -77,7 +68,7 @@ const PostForm: React.FC<PostFormProps> = ({
     fetchSpecies();
   }, []);
 
-  // 種名のフィルタリング
+  // 名前のフィルタリング
   const filteredOptions =
     searchTerm.length >= 1
       ? speciesOptions.filter((option) =>
@@ -85,22 +76,13 @@ const PostForm: React.FC<PostFormProps> = ({
         )
       : [];
 
-  // 送信
+  // フォーム送信
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedOption) return;
 
-    // ユーザーが入力した時刻を Date に変換 (ローカル時刻として扱う)
-    const localDate = new Date(timestamp);
-
-    // バリデーションで未来は禁止しないので削除
-
-    // DB に保存するときは UTC として送信
-    const timestampUTC = localDate.toISOString(); 
-    // 例: "2025-07-25T00:45:00.000Z"
-
-    // 親の handleSubmit に UTC 時刻を渡す
-    handleSubmit(e, selectedOption, status, timestampUTC);
+    // SGタイムをそのまま handleSubmit に渡す
+    handleSubmit(e, selectedOption, status, timestamp);
   };
 
   return (
@@ -120,9 +102,8 @@ const PostForm: React.FC<PostFormProps> = ({
       <h3 style={{ fontWeight: "bold", marginBottom: "10px" }}>
         Report Your Sighting
       </h3>
-
       <form onSubmit={onSubmit}>
-        {/* 鳥名検索 */}
+        {/* 鳥の種名検索 */}
         <input
           type="text"
           placeholder="Enter bird name (e.g., Japanese White-eye)"
@@ -138,6 +119,7 @@ const PostForm: React.FC<PostFormProps> = ({
           }}
         />
 
+        {/* 候補一覧 */}
         {filteredOptions.length > 0 && (
           <ul
             style={{
@@ -190,7 +172,11 @@ const PostForm: React.FC<PostFormProps> = ({
                 </span>
                 {selectedOption?.species_code === option.species_code && (
                   <span
-                    style={{ marginLeft: "10px", color: "white", fontWeight: "bold" }}
+                    style={{
+                      marginLeft: "10px",
+                      color: "white",
+                      fontWeight: "bold",
+                    }}
                   >
                     ✔
                   </span>
@@ -224,7 +210,7 @@ const PostForm: React.FC<PostFormProps> = ({
           </label>
         </div>
 
-        {/* 日時 (秒・ミリ秒なし) */}
+        {/* 日時: SGタイム (YYYY-MM-DDTHH:mm) */}
         <input
           type="datetime-local"
           value={timestamp}
@@ -239,7 +225,7 @@ const PostForm: React.FC<PostFormProps> = ({
           }}
         />
 
-        {/* 現在地＆送信ボタン */}
+        {/* 現在地 / Post */}
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <button
             type="button"
@@ -272,7 +258,7 @@ const PostForm: React.FC<PostFormProps> = ({
         </div>
       </form>
 
-      {/* メッセージ（成功・失敗など） */}
+      {/* メッセージ表示 */}
       {message && (
         <p
           style={{
