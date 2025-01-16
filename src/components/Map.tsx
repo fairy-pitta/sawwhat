@@ -6,9 +6,6 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import formatDate from "../utils/formatDate";
 
-// ▼ アイコンのimport
-import { FiRefreshCw } from "react-icons/fi";   // リロード用アイコン
-import { GiShipWheel } from "react-icons/gi";  // 船の舵アイコン
 
 interface Sighting {
   id: number;
@@ -16,7 +13,7 @@ interface Sighting {
   common_name: string;
   sci_name: string;
   timestamp: string;
-  status: string; // "sighted" or "unsighted"
+  status: string;
 }
 
 interface MapProps {
@@ -116,7 +113,7 @@ const Map: React.FC<MapProps> = ({
                     >
                       {/* 状態 + 日時 */}
                       <h4 style={{ margin: "0 0 5px", fontWeight: "bold" }}>
-                        {s.status === "unsighted" ? "Unsighted" : "Sighted"} on{" "}
+                        {s.status === "not seen" ? "Not Seen" : "Seen"} on{" "}
                         {formatDate(s.timestamp)}
                       </h4>
                       {/* 名前 */}

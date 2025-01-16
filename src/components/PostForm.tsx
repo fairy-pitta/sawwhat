@@ -12,7 +12,7 @@ interface BirdOption {
 }
 
 // 観察ステータス
-type SightingStatus = "sighted" | "unsighted";
+type SightingStatus = "seen" | "not seen";
 
 interface PostFormProps {
   timestamp: string;
@@ -41,7 +41,7 @@ const PostForm: React.FC<PostFormProps> = ({
   const [speciesOptions, setSpeciesOptions] = useState<BirdOption[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedOption, setSelectedOption] = useState<BirdOption | null>(null);
-  const [status, setStatus] = useState<SightingStatus>("sighted");
+  const [status, setStatus] = useState<SightingStatus>("seen");
 
   // 初回、鳥の種類リストを取得
   useEffect(() => {
@@ -176,22 +176,22 @@ const PostForm: React.FC<PostFormProps> = ({
           <label style={{ marginRight: "10px" }}>
             <input
               type="radio"
-              value="sighted"
-              checked={status === "sighted"}
-              onChange={() => setStatus("sighted")}
+              value="seen"
+              checked={status === "seen"}
+              onChange={() => setStatus("seen")}
               style={{ marginRight: "5px" }}
             />
-            Sighted
+            Seen
           </label>
           <label>
             <input
               type="radio"
-              value="unsighted"
-              checked={status === "unsighted"}
-              onChange={() => setStatus("unsighted")}
+              value="not seen"
+              checked={status === "not seen"}
+              onChange={() => setStatus("not seen")}
               style={{ marginRight: "5px" }}
             />
-            Unsighted
+            Not Seen
           </label>
         </div>
 
