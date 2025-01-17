@@ -2,7 +2,12 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 interface FilterSidebarProps {
-  setFilter: (filter: { common_name: string; sci_name: string }) => void;
+  setFilter: (filter: {
+    dataSource: "observations" | "sightings" | "both";
+    status?: "seen" | "not seen";
+    common_name: string;
+    sci_name: string;
+  }) => void;
 }
 
 const FilterSidebar: React.FC<FilterSidebarProps> = ({ setFilter }) => {
@@ -14,6 +19,10 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ setFilter }) => {
     common_name: string;
     sci_name: string;
   } | null>(null);
+  const [dataSource, setDataSource] = useState<"observations" | "sightings" | "both">(
+    "both"
+  );
+  const [status, setStatus] = useState<"seen" | "not seen">("seen");
 
   // Fetch species data from the database
   useEffect(() => {
@@ -43,7 +52,12 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ setFilter }) => {
   // Apply the selected filter
   const handleFilterApply = () => {
     if (selectedOption) {
-      setFilter(selectedOption);
+      setFilter({
+        dataSource,
+        ...(dataSource !== "observations" && { status }),
+        common_name: selectedOption.common_name,
+        sci_name: selectedOption.sci_name,
+      });
     }
   };
 
@@ -58,11 +72,53 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ setFilter }) => {
         borderRadius: "8px",
         zIndex: 1000,
         boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
-        width: "300px", // Increased the width
+        width: "300px",
         color: "#333",
       }}
     >
       <h4>Filter</h4>
+      {/* Data Source Selection */}
+      <div style={{ marginBottom: "10px" }}>
+        <label style={{ display: "block", marginBottom: "5px" }}>
+          Data Source:
+        </label>
+        <select
+          value={dataSource}
+          onChange={(e) => setDataSource(e.target.value as any)}
+          style={{
+            width: "100%",
+            padding: "8px",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+          }}
+        >
+          <option value="both">Both</option>
+          <option value="observations">Observations</option>
+          <option value="sightings">Sightings</option>
+        </select>
+      </div>
+
+      {/* Observation Status Selection (shown only for sightings or both) */}
+      {(dataSource === "sightings" || dataSource === "both") && (
+        <div style={{ marginBottom: "10px" }}>
+          <label style={{ display: "block", marginBottom: "5px" }}>Status:</label>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value as any)}
+            style={{
+              width: "100%",
+              padding: "8px",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+            }}
+          >
+            <option value="seen">Seen</option>
+            <option value="not seen">Not Seen</option>
+          </select>
+        </div>
+      )}
+
+      {/* Species Search */}
       <input
         type="text"
         placeholder="Enter bird name"
@@ -79,7 +135,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ setFilter }) => {
       {filteredOptions.length > 0 && (
         <ul
           style={{
-            maxHeight: "200px", // Adjusted height
+            maxHeight: "200px",
             overflowY: "auto",
             marginBottom: "10px",
             border: "1px solid #ccc",
@@ -96,7 +152,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ setFilter }) => {
                 setSelectedOption(option);
               }}
               style={{
-                display: "flex", // Align checkbox and name horizontally
+                display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
                 padding: "5px",

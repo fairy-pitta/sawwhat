@@ -17,6 +17,11 @@ const sightingIcon = new L.Icon({
 
 interface SightingsMarkersProps {
   sightings: Sighting[];
+  filter: {
+    status?: "seen" | "not seen";
+    common_name?: string;
+    sci_name?: string;
+  };
   selectedSighting: { lat: number; lng: number } | null;
   setSelectedSighting: React.Dispatch<
     React.SetStateAction<{ lat: number; lng: number } | null>
@@ -25,12 +30,25 @@ interface SightingsMarkersProps {
 
 const SightingsMarkers: React.FC<SightingsMarkersProps> = ({
   sightings,
+  filter,
   selectedSighting,
   setSelectedSighting,
 }) => {
+  // フィルタリングされたデータ
+  const filteredSightings = sightings.filter((sighting) => {
+    const matchesStatus =
+      !filter.status || sighting.status === filter.status;
+    const matchesCommonName =
+      !filter.common_name || sighting.common_name === filter.common_name;
+    const matchesSciName =
+      !filter.sci_name || sighting.sci_name === filter.sci_name;
+
+    return matchesStatus && matchesCommonName && matchesSciName;
+  });
+
   return (
     <>
-      {sightings.map((sighting) => (
+      {filteredSightings.map((sighting) => (
         <Marker
           key={sighting.id}
           position={[sighting.location.lat, sighting.location.lng]}
@@ -43,7 +61,7 @@ const SightingsMarkers: React.FC<SightingsMarkersProps> = ({
             selectedSighting?.lng === sighting.location.lng && (
               <Popup>
                 <div style={{ maxHeight: "200px", overflowY: "auto" }}>
-                  {sightings
+                  {filteredSightings
                     .filter(
                       (s) =>
                         s.location.lat === sighting.location.lat &&
@@ -62,7 +80,9 @@ const SightingsMarkers: React.FC<SightingsMarkersProps> = ({
                           {s.status === "not seen" ? "Not Seen" : "Seen"} on{" "}
                           {formatDate(s.timestamp)}
                         </h4>
-                        <p style={{ margin: 0, fontStyle: "italic", color: "#555" }}>
+                        <p
+                          style={{ margin: 0, fontStyle: "italic", color: "#555" }}
+                        >
                           {s.common_name} ({s.sci_name})
                         </p>
                       </div>

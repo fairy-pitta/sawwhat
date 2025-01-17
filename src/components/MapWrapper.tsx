@@ -15,6 +15,12 @@ interface MapWrapperProps {
     React.SetStateAction<{ lat: number; lng: number } | null>
   >;
   handleMarkerDragEnd: (event: L.LeafletEvent) => void;
+  filter?: {
+    dataSource: "observations" | "sightings" | "both";
+    status?: "seen" | "not seen";
+    common_name?: string;
+    sci_name?: string;
+  };
 }
 
 const MapWrapper: React.FC<MapWrapperProps> = ({
@@ -25,6 +31,7 @@ const MapWrapper: React.FC<MapWrapperProps> = ({
   selectedSighting,
   setSelectedSighting,
   handleMarkerDragEnd,
+  filter = { dataSource: "both" }, // デフォルト値を設定
 }) => {
   return (
     <MapContainer center={[center.lat, center.lng]} zoom={12} style={mapContainerStyle}>
@@ -36,12 +43,15 @@ const MapWrapper: React.FC<MapWrapperProps> = ({
         currentLocation={currentLocation}
         handleMarkerDragEnd={handleMarkerDragEnd}
       />
-      <SightingsMarkers
-        sightings={sightings}
-        selectedSighting={selectedSighting}
-        setSelectedSighting={setSelectedSighting}
-      />
-      <ObservationsMarkers /> {/* 新しく追加 */}
+      {filter.dataSource !== "observations" && (
+        <SightingsMarkers
+          sightings={sightings}
+          filter={filter}
+          selectedSighting={selectedSighting}
+          setSelectedSighting={setSelectedSighting}
+        />
+      )}
+      {filter.dataSource !== "sightings" && <ObservationsMarkers filter={filter} />}
     </MapContainer>
   );
 };

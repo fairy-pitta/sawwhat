@@ -25,7 +25,14 @@ interface Observation {
   longitude: string;
 }
 
-const ObservationsMarkers: React.FC = () => {
+interface ObservationsMarkersProps {
+  filter: {
+    common_name?: string; // オプショナルにして未指定時のデフォルト処理を可能に
+    sci_name?: string;
+  };
+}
+
+const ObservationsMarkers: React.FC<ObservationsMarkersProps> = ({ filter }) => {
   const [observations, setObservations] = useState<Observation[]>([]);
 
   useEffect(() => {
@@ -33,14 +40,24 @@ const ObservationsMarkers: React.FC = () => {
       try {
         const response = await fetch("/api/observations");
         const data = await response.json();
-        setObservations(data);
+
+        // フィルタが指定されている場合にデータを絞り込み
+        const filteredData = data.filter((observation: Observation) => {
+          if (!filter.common_name || !filter.sci_name) return true; // フィルタ未設定なら全件表示
+          return (
+            observation.common_name === filter.common_name &&
+            observation.scientific_name === filter.sci_name
+          );
+        });
+
+        setObservations(filteredData);
       } catch (error) {
         console.error("Failed to fetch observations:", error);
       }
     };
 
     fetchObservations();
-  }, []);
+  }, [filter]);
 
   // 同じ緯度・経度の観察データをグループ化
   const groupedObservations = observations.reduce((acc, observation) => {
