@@ -45,7 +45,6 @@ const ObservationsMarkers: React.FC<ObservationsMarkersProps> = ({ filter }) => 
         const filteredData = data.filter((observation: Observation) => {
           if (!filter.common_name || !filter.sci_name) return true; // フィルタ未設定なら全件表示
           return (
-            observation.common_name === filter.common_name &&
             observation.scientific_name === filter.sci_name
           );
         });
